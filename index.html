@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>XGBoost Visualizer</title>
+<meta name="description" content="Interactive step-by-step visualizer of XGBoost (gradient-boosted trees) for beginners: gradients, split gain, leaf weights and log-loss with real numbers.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%2311151f'/%3E%3Ctext x='16' y='21' font-family='monospace' font-size='13' font-weight='700' fill='%232dd4bf' text-anchor='middle'%3EXG%3C/text%3E%3C/svg%3E">
 <style>
   :root {
     --bg: #0f1117;
@@ -186,6 +188,7 @@
   .tree-nav { display: flex; align-items: center; gap: 6px; }
   .btn:disabled { opacity: .35; cursor: default; border-color: var(--border2); }
   .canvas-wrap.data.erase { cursor: cell; }
+  .canvas-wrap.data canvas { touch-action: none; } /* lets touch spray/erase without scrolling the page */
   .field.off { opacity: .35; pointer-events: none; }
   .tn text.t1 { fill: var(--text); font-weight: 600; }
   .edge { stroke: var(--border2); stroke-width: 1.3; fill: none; }
@@ -234,7 +237,7 @@
       <!-- 01 Data canvas -->
       <div class="panel" id="pData">
         <div class="panel-h"><span class="num">01</span><h2>Data Canvas</h2>
-          <span class="sub">Click: add · Erase tool, right-click or Shift+click: delete</span></div>
+          <span class="sub">Spray: hold &amp; drag · Erase: drag · Right-click / Shift+click: delete one point</span></div>
         <div class="toolbar">
           <select id="shape" title="Dataset shape">
             <option value="moons">Two moons</option>
@@ -253,8 +256,9 @@
         </div>
         <div class="toolbar">
           <div class="seg" id="toolSeg" title="Canvas tool">
-            <button data-t="add" class="on">✚ Add</button>
-            <button data-t="erase">⌫ Erase</button>
+            <button data-t="spray" class="on" title="Hold and drag to spray random points inside the nozzle">⁘ Spray</button>
+            <button data-t="point" title="Click to add exactly one point">• Point</button>
+            <button data-t="erase" title="Drag to erase every point inside the nozzle">⌫ Erase</button>
           </div>
           <div class="field" id="classField">class
             <div class="seg" id="classSeg">
@@ -262,8 +266,8 @@
               <button data-c="1"><span class="dot" style="background:var(--c1)"></span>1</button>
             </div>
           </div>
-          <label class="chk"><input type="checkbox" id="sizeByG"> size points by |g|</label>
-          <label class="chk"><input type="checkbox" id="showParts" checked> show tree splits</label>
+          <div class="field" id="nozzleField" title="Radius of the spray / eraser circle">nozzle <input type="range" id="nozzle" min="6" max="80" step="2" value="28"><span class="v" id="nozzleV">28px</span></div>
+          <div class="field" id="densityField" title="Points added per spray burst (about 16 bursts per second)">density <input type="range" id="density" min="1" max="10" step="1" value="3"><span class="v" id="densityV">3</span></div>
         </div>
         <div class="canvas-wrap data" id="dataWrap">
           <canvas id="dataCv"></canvas>
@@ -275,6 +279,10 @@
           <span><span class="sw" style="background:#e6e9f0"></span>decision boundary p = 0.5</span>
           <span><span class="sw" style="background:var(--accent)"></span>current tree's splits</span>
           <span><span class="dot" style="border:2px solid var(--accent)"></span>worked-example point</span>
+        </div>
+        <div class="legend">
+          <label class="chk"><input type="checkbox" id="showParts" checked> show tree splits</label>
+          <label class="chk"><input type="checkbox" id="sizeByG"> size points by |g| (how wrong each point is)</label>
         </div>
       </div>
 
@@ -731,7 +739,7 @@ function runSelfTest() {
   let data = [];
   let S = null;
   let playing = false, granularity = "stage", addClass = 0, hoverIdx = -1, showAll = false, notice = "";
-  let tool = "add";     // canvas tool: "add" | "erase"
+  let tool = "spray";   // canvas tool: "spray" | "point" | "erase"
   let viewTree = -1;    // −1 = live tree being built; k ≥ 0 = browsing finished tree S.trees[k]
   let hoverNode = -1;   // tree-diagram node under the mouse (highlighted on the canvas)
   let lossHover = -1, lastEventKey = 0, prevTable = new Map(), prevFlashNode = null;
@@ -936,10 +944,18 @@ function runSelfTest() {
       ctx.strokeStyle = tool === "erase" ? "#f87171" : "#fff"; ctx.lineWidth = tool === "erase" ? 2.2 : 1.5;
       ctx.beginPath(); ctx.arc(px, py, 8, 0, Math.PI * 2); ctx.stroke();
     }
+    // nozzle ring for the Spray / Erase tools
+    if (brush && tool !== "point") {
+      ctx.strokeStyle = tool === "erase" ? "rgba(248,113,113,.95)" : addClass ? "rgba(245,161,66,.95)" : "rgba(91,141,239,.95)";
+      ctx.fillStyle = tool === "erase" ? "rgba(248,113,113,.08)" : addClass ? "rgba(245,161,66,.08)" : "rgba(91,141,239,.08)";
+      ctx.lineWidth = 1.5; ctx.setLineDash([4, 3]);
+      ctx.beginPath(); ctx.arc(brush.px, brush.py, nozzle(), 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.setLineDash([]);
+    }
     if (!data.length) {
       ctx.fillStyle = "#8a93a8"; ctx.font = "13px " + getComputedStyle(document.body).getPropertyValue("--sans");
       ctx.textAlign = "center"; ctx.textBaseline = "middle";
-      ctx.fillText("No data — click to add points or press Generate", DR.x + DR.w / 2, DR.y + DR.h / 2);
+      ctx.fillText("No data — spray or click to add points, or press Generate", DR.x + DR.w / 2, DR.y + DR.h / 2);
     }
   }
 
@@ -969,33 +985,79 @@ function runSelfTest() {
     tip.style.left = x + "px"; tip.style.top = y + "px";
   }
 
-  dataCv.addEventListener("mousemove", e => {
-    if (!DR) return;
-    if (tool === "erase" && e.buttons === 1) deleteAt(e); // drag to erase
-    const [px, py] = canvasXY(e), i = nearestPoint(px, py, 9);
-    if (i !== hoverIdx) { hoverIdx = i; renderData(); }
-    showDataTip(i, px, py);
-  });
-  dataCv.addEventListener("mouseleave", () => { hoverIdx = -1; $("dataTip").style.display = "none"; renderData(); });
-  dataCv.addEventListener("contextmenu", e => { e.preventDefault(); deleteAt(e); });
-  dataCv.addEventListener("mousedown", e => {
-    if (e.button !== 0) return;
-    if (e.shiftKey || tool === "erase") { deleteAt(e); return; }
+  /* ---------- Canvas tools: Spray (nozzle), Point (single click), Erase (nozzle) ---------- */
+  const MAX_POINTS = 600;
+  let brush = null;                 // cursor position {px, py, down} while Spray / Erase is active
+  let sprayTimer = null, strokeStarted = false, strokeCount = 0;
+  const nozzle = () => +$("nozzle").value;   // nozzle radius in CSS px
+  const inPlot = (px, py) => DR && px >= DR.x && px <= DR.x + DR.w && py >= DR.y && py <= DR.y + DR.h;
+
+  // one spray burst: `density` random points, uniformly distributed inside the nozzle circle
+  function sprayTick() {
+    if (!brush) return;
+    const r = nozzle(), add = [];
+    for (let k = 0; k < +$("density").value && data.length + add.length < MAX_POINTS; k++) {
+      const a = Math.random() * 2 * Math.PI, rr = r * Math.sqrt(Math.random()); // √u → uniform over the disc area
+      const px = brush.px + rr * Math.cos(a), py = brush.py + rr * Math.sin(a);
+      if (!inPlot(px, py)) continue;
+      const [x, y] = toData(px, py);
+      add.push({ x1: +x.toFixed(3), x2: +y.toFixed(3), y: addClass });
+    }
+    if (add.length) {
+      data = data.concat(add); strokeCount += add.length;
+      dataChanged(`Sprayed ${strokeCount} class ${addClass} point${strokeCount > 1 ? "s" : ""}.`, strokeStarted);
+    } else if (data.length >= MAX_POINTS) { notice = `Point limit reached (${MAX_POINTS}) — erase some points first.`; renderStatus(); }
+  }
+  // erase every point inside the nozzle circle
+  function eraseTick() {
+    const r2 = nozzle() ** 2, before = data.length;
+    data = data.filter(d => { const [x, y] = toPx(d.x1, d.x2); return (x - brush.px) ** 2 + (y - brush.py) ** 2 > r2; });
+    if (data.length < before) {
+      strokeCount += before - data.length; hoverIdx = -1;
+      dataChanged(`Erased ${strokeCount} point${strokeCount > 1 ? "s" : ""}.`, strokeStarted);
+    }
+  }
+  function endStroke() { clearInterval(sprayTimer); sprayTimer = null; if (brush) brush.down = false; }
+
+  dataCv.addEventListener("pointerdown", e => {
+    if (!DR || e.button !== 0) return;
     const [px, py] = canvasXY(e);
-    if (px < DR.x || px > DR.x + DR.w || py < DR.y || py > DR.y + DR.h) return;
-    const [x, y] = toData(px, py);
-    data = data.concat([{ x1: +x.toFixed(3), x2: +y.toFixed(3), y: addClass }]);
-    dataChanged(`Added a class ${addClass} point.`);
+    strokeStarted = S.stepCount > 0; strokeCount = 0;
+    if (e.shiftKey) { deleteAt(px, py); return; }
+    if (tool === "point") {
+      if (!inPlot(px, py)) return;
+      const [x, y] = toData(px, py);
+      data = data.concat([{ x1: +x.toFixed(3), x2: +y.toFixed(3), y: addClass }]);
+      dataChanged(`Added a class ${addClass} point.`);
+      return;
+    }
+    try { dataCv.setPointerCapture(e.pointerId); } catch (_) { /* capture is only a nicety */ }
+    brush = { px, py, down: true };
+    $("dataTip").style.display = "none";
+    if (tool === "spray") { sprayTick(); sprayTimer = setInterval(sprayTick, 60); } // keeps spraying while held still
+    else eraseTick();
   });
-  function deleteAt(e) {
-    const [px, py] = canvasXY(e), i = nearestPoint(px, py, 10);
+  dataCv.addEventListener("pointermove", e => {
+    if (!DR) return;
+    const [px, py] = canvasXY(e);
+    if (tool !== "point") brush = { px, py, down: !!(brush && brush.down) };
+    if (brush && brush.down && tool === "erase") eraseTick();
+    hoverIdx = nearestPoint(px, py, 9);
+    renderData();
+    showDataTip(brush && brush.down ? -1 : hoverIdx, px, py);
+  });
+  dataCv.addEventListener("pointerup", endStroke);
+  dataCv.addEventListener("pointercancel", endStroke);
+  dataCv.addEventListener("pointerleave", () => { endStroke(); brush = null; hoverIdx = -1; $("dataTip").style.display = "none"; renderData(); });
+  dataCv.addEventListener("contextmenu", e => { e.preventDefault(); strokeStarted = S.stepCount > 0; deleteAt(...canvasXY(e)); });
+  function deleteAt(px, py) {
+    const i = nearestPoint(px, py, 10);
     if (i < 0) return;
     data = data.filter((_, k) => k !== i);
     hoverIdx = -1; $("dataTip").style.display = "none";
-    dataChanged(`Deleted point #${i}.`);
+    dataChanged(`Deleted point #${i}.`, strokeStarted);
   }
-  function dataChanged(msg) {
-    const started = S && S.stepCount > 0;
+  function dataChanged(msg, started = S && S.stepCount > 0) {
     pause();
     S = initState(data);
     prevTable.clear(); viewTree = -1; hoverNode = -1;
@@ -1003,7 +1065,7 @@ function runSelfTest() {
     renderAll();
   }
   function dataWarning() {
-    if (!data.length) return "No points — generate a dataset or click the canvas to add some.";
+    if (!data.length) return "No points — generate a dataset, or spray / click on the canvas to add some.";
     const ones = data.filter(d => d.y === 1).length;
     if (data.every(d => d.x1 === data[0].x1 && d.x2 === data[0].x2)) return "All points are identical — no split is possible, so every tree is a single leaf.";
     if (ones === 0 || ones === data.length) return `Only one class present — the model can only learn "always class ${data[0].y}" (loss still shrinks toward 0).`;
@@ -1060,6 +1122,8 @@ function runSelfTest() {
   $("speed").addEventListener("input", e => { $("speedV").textContent = SPEEDS[+e.target.value - 1] + "/s"; });
   $("nPts").addEventListener("input", e => { $("nPtsV").textContent = e.target.value; });
   $("noise").addEventListener("input", e => { $("noiseV").textContent = (+e.target.value).toFixed(2); });
+  $("nozzle").addEventListener("input", e => { $("nozzleV").textContent = e.target.value + "px"; });
+  $("density").addEventListener("input", e => { $("densityV").textContent = e.target.value; });
   $("dice").addEventListener("click", () => { $("seed").value = Math.floor(Math.random() * 100000); generate(); });
   $("gen").addEventListener("click", generate);
   $("clear").addEventListener("click", () => { data = []; dataChanged("Cleared all points."); });
@@ -1074,7 +1138,9 @@ function runSelfTest() {
     tool = b.dataset.t;
     $("toolSeg").querySelectorAll("button").forEach(x => x.classList.toggle("on", x === b));
     $("dataWrap").classList.toggle("erase", tool === "erase");
-    $("classField").classList.toggle("off", tool === "erase");
+    $("classField").classList.toggle("off", tool === "erase");   // class only matters when adding
+    $("nozzleField").classList.toggle("off", tool === "point");  // nozzle used by Spray and Erase
+    $("densityField").classList.toggle("off", tool !== "spray"); // density only for Spray
   });
   for (const b of $("granSeg").querySelectorAll("button")) b.addEventListener("click", () => {
     granularity = b.dataset.g;
@@ -1187,7 +1253,7 @@ function runSelfTest() {
     const pt = i => data[i] ? `point #${i} (x₁ = ${fmt(data[i].x1, 2)}, x₂ = ${fmt(data[i].x2, 2)}, y = ${data[i].y} ${cls(data[i].y)})` : "";
     switch (ev.type) {
       case "empty":
-        return `<p class="lead">No data yet</p><p>Pick a dataset and press <b>Generate</b>, or left-click on the canvas to add points of the selected class.</p>`;
+        return `<p class="lead">No data yet</p><p>Pick a dataset and press <b>Generate</b>, or use the <b>Spray</b> / <b>Point</b> tool on the canvas to add points of the selected class.</p>`;
       case "init":
         return `<p class="lead">Model initialised: F<sub>0</sub> = 0 for every point</p>
           <p>Before any tree exists, every point gets the same raw score (log-odds) F = 0, i.e. probability p = σ(0) = 0.5 (XGBoost's base_score).</p>
