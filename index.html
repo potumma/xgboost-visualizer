@@ -179,6 +179,7 @@
   .tn.leaf0 rect { stroke: var(--c0); fill: rgba(91,141,239,.10); }
   .tn.leaf1 rect { stroke: var(--c1); fill: rgba(245,161,66,.10); }
   .tn.leafq rect { stroke: var(--dim); }
+  .tn.weak rect { stroke: var(--warn); stroke-dasharray: 5 3; }
   .tn.cur rect { stroke: var(--accent); stroke-width: 2.2; }
   .tn.flash rect { animation: nflash 1.1s ease-out; }
   @keyframes nflash { 0% { fill: rgba(45,212,191,.45); } 100% { } }
@@ -489,8 +490,10 @@ function predictF(trees, x1, x2) {
  * Exact greedy split finding (XGBoost "exact" tree method).
  * For every feature, sort the node's points and try every midpoint between distinct neighbours.
  *
- *   Gain = ½ · [ G_L²/(H_L+λ) + G_R²/(H_R+λ) − (G_L+G_R)²/(H_L+H_R+λ) ] − γ
+ *   Gain = G_L²/(H_L+λ) + G_R²/(H_R+λ) − (G_L+G_R)²/(H_L+H_R+λ)
  *
+ * This is the form the xgboost library uses (the paper writes ½[…] − γ). γ is NOT subtracted here:
+ * like the library, the tree is grown first and splits with Gain < γ are pruned afterwards (pruneTree).
  * A candidate is valid only if both children satisfy H ≥ min_child_weight.
  */
 function findBestSplit(idx, data, g, h, P) {
@@ -512,18 +515,20 @@ function findBestSplit(idx, data, g, h, P) {
       const GR = G - GL, HR = H - HL, thr = (v + vn) / 2;
       const valid = HL >= P.mcw && HR >= P.mcw;
       const sL = (GL * GL) / den(HL + P.lambda), sR = (GR * GR) / den(HR + P.lambda);
-      const gain = 0.5 * (sL + sR - sP) - P.gamma;
+      const gain = sL + sR - sP;
       scans[f].push({ thr, gain, valid });
       if (!valid) continue;
       nValid++;
-      if (!best || gain > best.gain + 1e-12)
+      // tie-break like the library: lower feature index wins; within a feature the larger threshold wins
+      const tie = best && Math.abs(gain - best.gain) <= 1e-9 * Math.max(1, Math.abs(gain));
+      if (!best || (gain > best.gain && !tie) || (tie && f === best.f))
         best = { f, thr, gain, GL, HL, GR, HR, nL: k + 1, nR: sorted.length - k - 1, sL, sR, sP };
     }
   }
   let reason = null;
   if (nCand === 0) reason = "identical";
   else if (nValid === 0) reason = "mcw";
-  else if (best.gain <= 0) reason = "gain";
+  else if (best.gain <= 1e-6) reason = "gain"; // library: split only if loss reduction > kRtEps (1e-6)
   return { G, H, best, scans, nCand, nValid, reason };
 }
 
@@ -613,11 +618,40 @@ function stepSplit(s, data, P) {
 }
 
 /**
- * Stage 3 — optimal leaf weights.
+ * Pruning with γ (min_split_loss), bottom-up like xgboost's pruner:
+ * a split whose two children are both leaves is removed if its Gain < γ; its parent may then be
+ * checked again. A weak split survives if a split below it survives (it "enables" a good split).
+ * Mutates the given nodes array (a copy owned by the caller) and returns the removed splits.
+ */
+function pruneTree(nodes, gamma) {
+  const pruned = [];
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (let k = nodes.length - 1; k >= 0; k--) { // deepest nodes have the largest ids (breadth-first)
+      const nd = nodes[k];
+      if (nd.status !== "split") continue;
+      const L = nodes[nd.left], R = nodes[nd.right];
+      if (L.status === "leaf" && R.status === "leaf" && nd.split.gain < gamma) {
+        pruned.push({ id: nd.id, f: nd.split.f, thr: nd.split.thr, gain: nd.split.gain });
+        nodes[k] = { ...nd, status: "leaf", leafReason: "pruned", prunedSplit: nd.split, split: null, left: -1, right: -1 };
+        nodes[L.id] = { ...L, status: "pruned" };
+        nodes[R.id] = { ...R, status: "pruned" };
+        changed = true;
+      }
+    }
+  }
+  return pruned;
+}
+
+/**
+ * Stage 3 — prune with γ, then optimal leaf weights.
  * Second-order Taylor expansion of the loss in a leaf: Σ(g·w + ½h·w²) + ½λw²  →  minimised at  w* = −G/(H+λ)
  */
 function stepLeaves(s, data, P) {
-  const nodes = s.build.nodes.map(nd => (nd.status === "leaf" ? { ...nd, w: -nd.G / den(nd.H + P.lambda) } : nd));
+  const grown = s.build.nodes.slice();
+  const pruned = pruneTree(grown, P.gamma);
+  const nodes = grown.map(nd => (nd.status === "leaf" ? { ...nd, w: -nd.G / den(nd.H + P.lambda) } : nd));
   const leaves = nodes.filter(nd => nd.status === "leaf");
   leaves.forEach((nd, k) => { nd.leafNo = k + 1; });
   const leafOf = new Int32Array(data.length);
@@ -629,7 +663,7 @@ function stepLeaves(s, data, P) {
   return {
     ...s, build: { ...s.build, nodes, leafOf }, phase: "update", lastNode: -1,
     event: { type: "leaves", leaves: leaves.map(nd => ({ id: nd.id, leafNo: nd.leafNo, n: nd.idx.length, G: nd.G, H: nd.H, w: nd.w })),
-             lambda: P.lambda, gamma: P.gamma, obj, focusLeaf: leafOf[s.focus], treeNo: s.build.treeNo },
+             lambda: P.lambda, gamma: P.gamma, obj, focusLeaf: leafOf[s.focus], treeNo: s.build.treeNo, pruned },
   };
 }
 
@@ -695,9 +729,10 @@ function runSelfTest() {
   // Hand computation:
   //   F0 = 0 → p = 0.5, g = p − y = [0.5, 0.5, −0.5, −0.5], h = 0.25 each
   //   Best split x1 < 1.5: G_L = 1, H_L = 0.5, G_R = −1, H_R = 0.5, G = 0, H = 1
-  //   Gain = ½[1²/1.5 + 1²/1.5 − 0²/2] − 0 = 0.666667
+  //   Gain = 1²/1.5 + 1²/1.5 − 0²/2 = 1.333333
   //   w_L = −1/1.5 = −0.666667 , w_R = +0.666667
   //   F = 0 + 0.3·w → ∓0.2 ;  p(correct) = σ(0.2) = 0.549834 ;  L = −ln(0.549834) = 0.598139
+  //   With γ = 2: Gain 1.333 < γ → the split is pruned → one leaf with w = −0/(1+1) = 0
   let s = initState(data);
   const L0 = s.history[0].loss;
   s = step(s, data, P);            // gradients
@@ -707,12 +742,16 @@ function runSelfTest() {
   s = step(s, data, P);            // leaves
   const wL = s.build.nodes[1].w, wR = s.build.nodes[2].w;
   s = step(s, data, P);            // update
+  let s2 = initState(data);        // same tree with γ = 2 → pruned
+  for (let k = 0; k < 3; k++) s2 = step(s2, data, { ...P, gamma: 2 });
+  const leaves2 = s2.build.nodes.filter(nd => nd.status === "leaf");
   const rows = [
     ["initial loss ln 2", 0.693147, L0],
     ["g[0] = p − y", 0.5, g[0]], ["g[3]", -0.5, g[3]], ["h[0] = p(1−p)", 0.25, h[0]],
     ["split feature (0 = x1)", 0, sp ? sp.f : NaN], ["split threshold", 1.5, sp ? sp.thr : NaN],
-    ["gain", 0.666667, sp ? sp.gain : NaN], ["w_left = −G/(H+λ)", -0.666667, wL], ["w_right", 0.666667, wR],
+    ["gain", 1.333333, sp ? sp.gain : NaN], ["w_left = −G/(H+λ)", -0.666667, wL], ["w_right", 0.666667, wR],
     ["F[0] after η·w", -0.2, s.F[0]], ["F[3] after η·w", 0.2, s.F[3]], ["loss after tree 1", 0.598139, s.history[1].loss],
+    ["γ=2: leaves after pruning", 1, leaves2.length], ["γ=2: root weight", 0, leaves2[0] ? leaves2[0].w : NaN],
   ];
   let ok = true;
   const table = rows.map(([name, exp, act]) => {
@@ -765,7 +804,7 @@ function runSelfTest() {
     { key: "eta", name: "learning_rate", sym: "η", min: 0.01, max: 1, step: 0.01, f: v => v.toFixed(2), hint: "Shrinkage: each tree only adds η·f(x) to the score." },
     { key: "maxDepth", name: "max_depth", sym: "", min: 1, max: 6, step: 1, f: v => v, hint: "How many levels of yes/no questions a tree may ask." },
     { key: "lambda", name: "reg_lambda", sym: "λ", min: 0, max: 10, step: 0.1, f: v => v.toFixed(1), hint: "L2 penalty: shrinks leaf weights w = −G/(H+λ) and the gain." },
-    { key: "gamma", name: "gamma", sym: "γ", min: 0, max: 5, step: 0.05, f: v => v.toFixed(2), hint: "Minimum gain needed to make a split (cost of one extra leaf)." },
+    { key: "gamma", name: "gamma", sym: "γ", min: 0, max: 5, step: 0.05, f: v => v.toFixed(2), hint: "Pruning threshold: after growing, splits with Gain < γ are removed (bottom-up)." },
     { key: "mcw", name: "min_child_weight", sym: "", min: 0, max: 10, step: 0.1, f: v => v.toFixed(1), hint: "Each child must have hessian sum H ≥ this value." },
     { key: "tol", name: "tolerance", sym: "ε", min: -6, max: -1, step: 0.5, log: true, f: v => expFmt(v), hint: "Convergence: stop when the loss improves by less than ε." },
   ];
@@ -1215,18 +1254,21 @@ function runSelfTest() {
 
   /* ---------- Model state ---------- */
   const STAGES = [["grad", "1 · Gradients", "g = p−y, h = p(1−p)"], ["split", "2 · Find splits", "maximise Gain"],
-                  ["leaves", "3 · Leaf weights", "w = −G/(H+λ)"], ["update", "4 · Update F", "F ← F + η·w"]];
+                  ["leaves", "3 · Prune + leaf weights", "Gain<γ ✂ · w = −G/(H+λ)"], ["update", "4 · Update F", "F ← F + η·w"]];
   function renderStages() {
     const did = { grad: "grad", split: "split", leaves: "leaves", update: "update", round: "update" }[S.event.type];
     $("stages").innerHTML = STAGES.map(([k, t, f]) =>
       `<div class="stage ${k === did ? "did" : ""} ${k === S.phase ? "next" : ""}"><b>${t}</b><code>${f}</code></div>`).join("");
   }
 
+  // Gain = similarity(left) + similarity(right) − similarity(parent), similarity = G²/(H+λ)  (xgboost library form)
   function gainFormula(bs, lam, gam) {
     return `<div class="formula">
-      Gain = ½ [ ${fr("G<sub>L</sub>²", "H<sub>L</sub>+λ")} + ${fr("G<sub>R</sub>²", "H<sub>R</sub>+λ")} − ${fr("(G<sub>L</sub>+G<sub>R</sub>)²", "H<sub>L</sub>+H<sub>R</sub>+λ")} ] − γ<br>
-      &nbsp; &nbsp; &nbsp;= ½ [ ${fr(par(bs.GL) + "²", fmt(bs.HL) + " + " + fmt(lam, 1))} + ${fr(par(bs.GR) + "²", fmt(bs.HR) + " + " + fmt(lam, 1))} − ${fr(par(bs.GL + bs.GR) + "²", fmt(bs.HL + bs.HR) + " + " + fmt(lam, 1))} ] − ${fmt(gam, 2)}<br>
-      &nbsp; &nbsp; &nbsp;= ½ [ ${fmt(bs.sL)} + ${fmt(bs.sR)} − ${fmt(bs.sP)} ] − ${fmt(gam, 2)} = ${res(fmt(bs.gain, 4))}</div>`;
+      Gain = ${fr("G<sub>L</sub>²", "H<sub>L</sub>+λ")} + ${fr("G<sub>R</sub>²", "H<sub>R</sub>+λ")} − ${fr("(G<sub>L</sub>+G<sub>R</sub>)²", "H<sub>L</sub>+H<sub>R</sub>+λ")}
+        <span class="c">&nbsp;(left + right − parent "similarity")</span><br>
+      &nbsp; &nbsp; &nbsp;= ${fr(par(bs.GL) + "²", fmt(bs.HL) + " + " + fmt(lam, 1))} + ${fr(par(bs.GR) + "²", fmt(bs.HR) + " + " + fmt(lam, 1))} − ${fr(par(bs.GL + bs.GR) + "²", fmt(bs.HL + bs.HR) + " + " + fmt(lam, 1))}<br>
+      &nbsp; &nbsp; &nbsp;= ${fmt(bs.sL)} + ${fmt(bs.sR)} − ${fmt(bs.sP)} = ${res(fmt(bs.gain, 4))}
+      &nbsp;<span class="c">${bs.gain >= gam ? "≥" : "<"} γ = ${fmt(gam, 2)}</span></div>`;
   }
   function updateFormula(ev) {
     return `<div class="formula">F ← F + η·w = ${par(ev.Fold)} + ${fmt(ev.eta, 2)}·${par(ev.w)} = ${res(fmt(ev.Fnew))}<br>
@@ -1234,6 +1276,13 @@ function runSelfTest() {
       <div class="formula">L: ${fmt(ev.lossBefore, 5)} → ${res(fmt(ev.lossAfter, 5))} &nbsp; |ΔL| = ${Math.abs(ev.lossBefore - ev.lossAfter).toExponential(2).replace("e-", "e−")} &nbsp;<span class="c">vs ε = ${expFmt(ev.tol)}</span></div>
       <p>${ev.stop === "tol" ? "<b>Converged ✓</b> — the loss improved by less than ε, so another tree would barely help."
         : ev.stop === "max" ? `<b>Done ✓</b> — reached n_estimators = ${ev.nEst} trees.` : "Next: recompute gradients with the new scores and grow the next tree."}</p>`;
+  }
+  // what pruning did in Stage 3 (bottom-up: remove a split if both children are leaves and Gain < γ)
+  function pruneHTML(ev) {
+    if (!ev.gamma) return `<p class="cap">Pruning: γ = 0, so every split with positive gain is kept.</p>`;
+    if (!ev.pruned || !ev.pruned.length) return `<p class="cap">Pruning (γ = ${fmt(ev.gamma, 2)}): every split has Gain ≥ γ or a useful split below it — nothing removed.</p>`;
+    return `<p>Pruning (γ = ${fmt(ev.gamma, 2)}), checked bottom-up: a split is removed if both its children are leaves and its Gain &lt; γ.</p>
+      <div class="formula">${ev.pruned.map(q => `✂ node #${q.id}: ${FEAT[q.f]} &lt; ${fmt(q.thr, 2)} &nbsp;Gain ${fmt(q.gain, 4)} &lt; γ = ${fmt(ev.gamma, 2)} → becomes a leaf`).join("<br>")}</div>`;
   }
   function leavesList(ev, max) {
     const rows = ev.leaves.slice(0, max).map(l =>
@@ -1246,7 +1295,8 @@ function runSelfTest() {
     single: "it holds only one point",
     identical: "all its points share identical x₁ and x₂ values, so no threshold can separate them",
     mcw: "every candidate split leaves a child with hessian sum H < min_child_weight",
-    gain: "even the best split has Gain ≤ 0 (not worth the γ penalty)",
+    gain: "no split reduces the loss (best Gain ≤ 0)",
+    pruned: "its split was pruned (Gain < γ and no useful split below it)",
   };
 
   function explainHTML(ev) {
@@ -1277,14 +1327,17 @@ function runSelfTest() {
               The best one is <b>${FEAT[bs.f]} &lt; ${fmt(bs.thr)}</b>.</p>` + gainFormula(bs, ev.lambda, ev.gamma) +
             `<p>Left (${FEAT[bs.f]} &lt; ${fmt(bs.thr)}): ${bs.nL} points, G<sub>L</sub> = ${fmt(bs.GL)}, H<sub>L</sub> = ${fmt(bs.HL)} ·
               Right: ${bs.nR} points, G<sub>R</sub> = ${fmt(bs.GR)}, H<sub>R</sub> = ${fmt(bs.HR)}.
-              Gain &gt; 0 → <b>split kept</b>.${ev.focusSide ? ` The worked-example point goes <b>${ev.focusSide}</b>.` : ""}</p>`;
+              ${bs.gain >= ev.gamma ? `Gain ≥ γ → <b>split kept</b>.`
+                : `Gain &lt; γ → split kept <b>for now</b>: like real XGBoost, the tree is grown first and weak splits are pruned in Stage 3 — unless a split below this one turns out useful.`}
+              ${ev.focusSide ? ` The worked-example point goes <b>${ev.focusSide}</b>.` : ""}</p>`;
         }
         return head + `<p>This node becomes a <b>leaf</b> because ${REASON[ev.reason]}.</p>` +
           (ev.reason === "gain" && ev.best ? `<p class="cap">Best candidate was ${FEAT[ev.best.f]} &lt; ${fmt(ev.best.thr)}:</p>` + gainFormula(ev.best, ev.lambda, ev.gamma) : "") +
           (ev.reason === "mcw" ? `<div class="formula">need H<sub>L</sub> ≥ ${fmt(ev.mcw, 1)} and H<sub>R</sub> ≥ ${fmt(ev.mcw, 1)}, but the node only has H = ${fmt(ev.H)}</div>` : "");
       }
       case "leaves":
-        return `<p class="lead"><span class="tag">Stage 3</span>Leaf weights for tree #${ev.treeNo} (${ev.leaves.length} leaves)</p>
+        return `<p class="lead"><span class="tag">Stage 3</span>Prune + leaf weights for tree #${ev.treeNo} (${ev.leaves.length} leaves)</p>` +
+          pruneHTML(ev) + `
           <p>All points in a leaf get the same output w. Minimising the 2nd-order Taylor approximation of the loss,
              Σ(g·w + ½h·w²) + ½λw², gives the closed-form Newton step <b>w* = −G/(H+λ)</b>. λ pulls weights toward 0.</p>` +
           leavesList(ev, 8) +
@@ -1297,9 +1350,10 @@ function runSelfTest() {
         const sp = ev.splits.filter(x => x.didSplit);
         const list = sp.length ? `<ul>${sp.slice(0, 6).map(x => `<li>node #${x.nodeId}: ${FEAT[x.best.f]} &lt; ${fmt(x.best.thr)} &nbsp;(Gain = ${fmt(x.best.gain, 4)})</li>`).join("")}${sp.length > 6 ? `<li>… +${sp.length - 6} more</li>` : ""}</ul>`
           : `<p>No split had positive gain, so the tree is a single leaf.</p>`;
-        return `<p class="lead"><span class="tag">Round</span>Built tree #${ev.treeNo} in one step (${sp.length} splits, ${ev.nLeaves} leaves)</p>
-          <p>Gradients g = p − y and h = p(1−p) were computed, the best splits were chosen by Gain, leaf weights set to w = −G/(H+λ), then scores updated.</p>` +
-          list + (ev.leavesEv ? leavesList(ev.leavesEv, 4) : "") + `<p class="cap">Worked example: ${pt(ev.i)}</p>` + updateFormula(ev);
+        const nPruned = ev.leavesEv && ev.leavesEv.pruned ? ev.leavesEv.pruned.length : 0;
+        return `<p class="lead"><span class="tag">Round</span>Built tree #${ev.treeNo} in one step (${sp.length} splits grown${nPruned ? `, ${nPruned} pruned` : ""}, ${ev.nLeaves} leaves)</p>
+          <p>Gradients g = p − y and h = p(1−p) were computed, the best splits were chosen by Gain, splits with Gain &lt; γ were pruned, leaf weights set to w = −G/(H+λ), then scores updated.</p>` +
+          list + (nPruned ? pruneHTML(ev.leavesEv) : "") + (ev.leavesEv ? leavesList(ev.leavesEv, 4) : "") + `<p class="cap">Worked example: ${pt(ev.i)}</p>` + updateFormula(ev);
       }
       case "done":
         return `<p class="lead">${ev.reason === "tol" ? "Converged ✓" : "Done ✓"}</p>
@@ -1323,7 +1377,7 @@ function runSelfTest() {
     const chips = [["trees", S.trees.length], ["η", fmt(P.eta, 2)], ["λ", fmt(P.lambda, 1)], ["γ", fmt(P.gamma, 2)]];
     if (b) {
       const leaves = b.nodes.filter(n => n.status === "leaf").length, pend = b.queue.length;
-      chips.push(["building", "#" + b.treeNo], ["nodes", b.nodes.length], ["leaves", leaves], ["pending", pend]);
+      chips.push(["building", "#" + b.treeNo], ["nodes", b.nodes.filter(n => n.status !== "pruned").length], ["leaves", leaves], ["pending", pend]);
     }
     $("chips").innerHTML = chips.map(([k, v]) => `<span class="chip"><span class="k">${k}</span>${v}</span>`).join("");
     // each tree keeps the η it was trained with, so only factor η out if it never changed
@@ -1358,7 +1412,7 @@ function runSelfTest() {
     const cx = id => pad + pos[id] * SX + SX / 2, ty = id => pad + nodes[id].depth * SY;
     let svg = "";
     for (const nd of nodes) {
-      if (nd.status !== "split") continue;
+      if (nd.status !== "split" || pos[nd.id] === undefined) continue;
       for (const [c, lab] of [[nd.left, "yes"], [nd.right, "no"]]) {
         const x1 = cx(nd.id), y1 = ty(nd.id) + NH, x2 = cx(c), y2 = ty(c), my = (y1 + y2) / 2;
         svg += `<path class="edge" d="M${x1},${y1} C${x1},${my} ${x2},${my} ${x2},${y2}"/>`;
@@ -1367,14 +1421,18 @@ function runSelfTest() {
     }
     const flashId = curId >= 0 && prevFlashNode !== S.stepCount ? curId : -1;
     for (const nd of nodes) {
+      if (pos[nd.id] === undefined) continue; // removed by pruning
       const x = cx(nd.id) - NW / 2, y = ty(nd.id);
       let c = "tn", l1, l2, l3, title;
       if (nd.status === "split") {
-        l1 = `${FEAT[nd.split.f]} < ${fmt(nd.split.thr, 2)}`; l2 = `gain ${fmt(nd.split.gain, 3)}`; l3 = `n=${nd.idx.length}`;
-        title = `node #${nd.id}: G=${fmt(nd.G)}, H=${fmt(nd.H)}`;
+        const weak = nd.split.gain < P.gamma; // candidate for pruning (kept only if a useful split lies below)
+        if (weak) c += " weak";
+        l1 = `${FEAT[nd.split.f]} < ${fmt(nd.split.thr, 2)}`; l2 = `gain ${fmt(nd.split.gain, 3)}${weak ? " < γ" : ""}`; l3 = `n=${nd.idx.length}`;
+        title = `node #${nd.id}: G=${fmt(nd.G)}, H=${fmt(nd.H)}${weak ? " — Gain < γ: pruned unless a split below it survives" : ""}`;
       } else if (nd.status === "leaf") {
-        if (nd.w != null) { c += nd.w >= 0 ? " leaf1" : " leaf0"; l1 = `leaf L${nd.leafNo}`; l2 = `w = ${fmt(nd.w)}`; }
-        else { c += " leafq"; l1 = "leaf"; l2 = `G ${fmt(nd.G, 2)} H ${fmt(nd.H, 2)}`; }
+        const tag = nd.leafReason === "pruned" ? " ✂" : "";
+        if (nd.w != null) { c += nd.w >= 0 ? " leaf1" : " leaf0"; l1 = `leaf L${nd.leafNo}${tag}`; l2 = `w = ${fmt(nd.w)}`; }
+        else { c += " leafq"; l1 = "leaf" + tag; l2 = `G ${fmt(nd.G, 2)} H ${fmt(nd.H, 2)}`; }
         l3 = `n=${nd.idx.length}`;
         title = `node #${nd.id} (leaf): G=${fmt(nd.G)}, H=${fmt(nd.H)}${nd.leafReason ? " — " + REASON[nd.leafReason] : ""}`;
       } else {
@@ -1417,6 +1475,8 @@ function runSelfTest() {
     const all = ev.scans[0].concat(ev.scans[1]);
     let lo = 0, hi = 0;
     for (const s of all) { lo = Math.min(lo, s.gain); hi = Math.max(hi, s.gain); }
+    const gam = ev.gamma || 0;
+    if (gam > 0) hi = Math.max(hi, gam);
     if (hi - lo < 1e-9) { hi += 1; lo -= 0.1; }
     const padY = (hi - lo) * 0.08; hi += padY; lo -= padY;
     const X = v => m.l + ((v - DOMAIN.x0) / (DOMAIN.x1 - DOMAIN.x0)) * pw, Y = v => m.t + ((hi - v) / (hi - lo)) * ph;
@@ -1433,7 +1493,12 @@ function runSelfTest() {
     ctx.strokeStyle = "rgba(255,255,255,.35)"; ctx.setLineDash([4, 3]);
     ctx.beginPath(); ctx.moveTo(m.l, Y(0)); ctx.lineTo(m.l + pw, Y(0)); ctx.stroke(); ctx.setLineDash([]);
     ctx.fillStyle = "#8a93a8"; ctx.textAlign = "left"; ctx.textBaseline = "bottom";
-    ctx.fillText("Gain = 0  (split only if above)", m.l + 4, Y(0) - 2);
+    ctx.fillText("Gain = 0", m.l + 4, Y(0) - 2);
+    if (gam > 0) { // pruning threshold
+      ctx.strokeStyle = "rgba(251,191,36,.8)"; ctx.setLineDash([6, 3]);
+      ctx.beginPath(); ctx.moveTo(m.l, Y(gam)); ctx.lineTo(m.l + pw, Y(gam)); ctx.stroke(); ctx.setLineDash([]);
+      ctx.fillStyle = "#fbbf24"; ctx.fillText(`γ = ${fmt(gam, 2)}  (below → may be pruned)`, m.l + 4, Y(gam) - 2);
+    }
     // curves
     const colors = ["#2dd4bf", "#a78bfa"];
     for (const f of [0, 1]) {
