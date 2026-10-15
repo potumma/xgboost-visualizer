@@ -24,6 +24,7 @@ One boosting round has 4 stages, and the app lets you step through each one:
 | Make data | Pick a shape (moons, circles, XOR, spirals…) and press **Generate**, or **Spray** points on the canvas |
 | Edit data | **Point** adds one point, **Erase** removes points under the nozzle, right-click deletes one point |
 | Run one step | **Step** button or <kbd>→</kbd> |
+| Go back one step | **◂ Back** button or <kbd>←</kbd> |
 | Train to the end | **Play until convergence** or <kbd>Space</kbd> |
 | Start over | **Reset model** or <kbd>R</kbd> |
 | Learn the words | Hover any dotted word in the explanation box |

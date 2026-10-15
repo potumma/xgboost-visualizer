@@ -10,7 +10,6 @@
   :root {
     --bg: #0b0e15;
     --panel: rgba(21, 26, 37, 0.88);
-    --panel2: #1a2030;
     --inset: #10141d;
     --border: rgba(255, 255, 255, 0.07);
     --border2: rgba(255, 255, 255, 0.12);
@@ -23,9 +22,13 @@
     --accent-glow: rgba(45, 212, 191, 0.38);
     --c0: #5b8def;
     --c1: #f5a142;
-    --x2: #a78bfa;
     --warn: #fbbf24;
     --ok: #34d399;
+    /* one color per algorithm stage, used only in the Model State panel (base = marks, -ink = text) */
+    --st1: #9085e9;  --st1-ink: #b9b1f7;   /* 1 · gradients        violet  */
+    --st2: #199e70;  --st2-ink: #4fd8ac;   /* 2 · splits           teal    */
+    --st3: #c98500;  --st3-ink: #f2b93b;   /* 3 · prune + leaves   gold    */
+    --st4: #d55181;  --st4-ink: #f28cb6;   /* 4 · update           magenta */
     --radius: 14px;
     --shadow: inset 0 1px 0 rgba(255, 255, 255, 0.045), 0 14px 34px -14px rgba(0, 0, 0, 0.7), 0 2px 6px rgba(0, 0, 0, 0.25);
     --mono: "JetBrains Mono", "Fira Code", "Cascadia Code", ui-monospace, SFMono-Regular, Consolas, monospace;
@@ -61,13 +64,13 @@
   main { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); min-height: 0; padding: 0 8px; }
   .col { overflow-y: auto; min-height: 0; padding: 14px 8px; display: flex; flex-direction: column; gap: 14px; }
   /* compact footer: one 32px line on desktop, wraps onto extra lines only on narrow screens */
-  footer { min-height: 32px; display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 3px 18px; padding: 6px 16px;
+  footer { min-height: 32px; display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 3px 26px; padding: 5px 20px; line-height: 1.4;
            font-size: 12px; color: var(--muted); border-top: 1px solid var(--border);
            background: rgba(10, 13, 20, 0.78); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
   footer .mem { white-space: nowrap; }
-  footer b { color: var(--text); font-weight: 500; }
-  footer .id { font-family: var(--mono); font-size: 11px; color: var(--dim); margin-left: 6px; }
-  footer .org { color: var(--accent); font-weight: 600; }
+  footer b { color: var(--text); font-weight: 500; font-size: 13px; letter-spacing: 0.01em; }
+  footer .id { font-family: var(--mono); font-size: 11.5px; color: var(--muted); margin-left: 8px; }
+  footer .org { color: var(--accent); font-weight: 600; font-size: 13px; }
 
   /* thin scrollbars */
   .col, .scroll, main { scrollbar-width: thin; scrollbar-color: rgba(255, 255, 255, 0.14) transparent; }
@@ -76,6 +79,14 @@
   ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.2); }
   ::-webkit-scrollbar-track { background: transparent; }
 
+  /* phones: hyperparameter name + value on one line, the slider full-width below it */
+  @media (max-width: 600px) {
+    #hpRows .hp { grid-template-columns: minmax(0, 1fr) auto; }
+    .hp .name { grid-column: 1; grid-row: 1; }
+    .hp .val { grid-column: 2; grid-row: 1; }
+    .hp input[type=range] { grid-column: 1 / -1; grid-row: 2; }
+    .hp .hint { grid-row: 3; }
+  }
   @media (max-width: 900px) {
     /* stacked: columns take their natural height and the body scrolls; minmax(0,…) stops wide content from widening the page */
     main { grid-template-columns: minmax(0, 1fr); grid-auto-rows: max-content; overflow-y: auto; padding: 0 4px; }
@@ -137,13 +148,13 @@
   input[type=range]:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(45, 212, 191, 0.25); }
   .field input[type=range] { width: 90px; }
 
-  .hp { display: grid; grid-template-columns: 150px minmax(0, 1fr) 58px; align-items: center; gap: 4px 12px; padding: 7px 0;
+  .hp { display: grid; grid-template-columns: 200px minmax(0, 1fr) 66px; align-items: center; gap: 6px 16px; padding: 11px 0;
         border-top: 1px solid rgba(255, 255, 255, 0.05); }
   .hp:first-child { border-top: 0; }
-  .hp .name { font-family: var(--mono); font-size: 12px; }
-  .hp .name i { color: var(--accent); font-style: normal; margin-left: 4px; }
-  .hp .val { font-family: var(--mono); text-align: right; color: var(--accent); background: var(--accent-soft); border-radius: 6px; padding: 0 6px; }
-  .hp .hint { grid-column: 1 / -1; color: var(--dim); font-size: 11.5px; margin-top: -3px; }
+  .hp .name { font-family: var(--mono); font-size: 13px; letter-spacing: 0.01em; color: var(--text); display: flex; align-items: center; gap: 8px; }
+  .hp .name i { color: var(--accent); font: 600 12px/18px var(--sans); font-style: normal; padding: 0 7px; border-radius: 6px; background: var(--accent-soft); }
+  .hp .val { font-family: var(--mono); font-size: 12.5px; text-align: right; color: var(--accent); background: var(--accent-soft); border-radius: 6px; padding: 1px 8px; }
+  .hp .hint { grid-column: 1 / -1; color: var(--muted); font-size: 12px; line-height: 1.45; margin-top: 0; }
 
   .controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 10px; }
   .status { font-family: var(--mono); font-size: 12px; background: var(--inset); border: 1px solid var(--border); border-radius: 11px;
@@ -176,6 +187,11 @@
   .canvas-ctrl button { width: 28px; height: 26px; display: grid; place-items: center; border: 0; border-radius: 8px; background: transparent;
                         color: var(--text); cursor: pointer; transition: background 0.15s, color 0.15s; }
   .canvas-ctrl button:hover { background: var(--accent-soft); color: var(--accent); }
+  /* collapsible card header (per-point table) */
+  .collapse { background: none; border: 0; padding: 0; cursor: pointer; color: inherit; font: inherit; letter-spacing: inherit; text-transform: inherit; }
+  .collapse:hover { color: var(--text); }
+  .collapse .cnt { text-transform: none; letter-spacing: 0; color: var(--dim); margin-left: 6px; font-weight: 400; }
+  .canvas-ctrl button:disabled { opacity: 0.35; cursor: default; background: transparent; color: var(--text); }
   .canvas-ctrl button.play { background: linear-gradient(135deg, var(--accent), var(--accent2)); color: #04201c; }
   .canvas-ctrl svg { width: 14px; height: 14px; display: block; }
   /* glossary: dotted words show a plain-English definition on hover */
@@ -185,8 +201,9 @@
              background: rgba(11, 14, 21, 0.96); border: 1px solid rgba(45, 212, 191, 0.35); color: var(--text); font-size: 12px; line-height: 1.5;
              box-shadow: 0 14px 30px -10px rgba(0, 0, 0, 0.9); }
   #termTip b { color: var(--accent); }
-  .plain { margin: 6px 0; padding: 6px 10px; border-radius: 9px; background: rgba(45, 212, 191, 0.07); border: 1px solid rgba(45, 212, 191, 0.2); }
-  .plain .k { color: var(--accent); font: 700 10.5px var(--sans); letter-spacing: 0.08em; text-transform: uppercase; margin-right: 6px; }
+  .plain { margin: 6px 0; padding: 6px 10px; border-radius: 9px; background: color-mix(in srgb, var(--sc, var(--accent)) 10%, transparent);
+           border: 1px solid color-mix(in srgb, var(--sc, var(--accent)) 32%, transparent); }
+  .plain .k { color: var(--sci, var(--accent)); font: 700 10.5px var(--sans); letter-spacing: 0.08em; text-transform: uppercase; margin-right: 6px; }
   .canvas-wrap.loss { height: 230px; }
   .canvas-wrap.gain { height: 150px; }
   .canvas-wrap.data.erase { cursor: cell; }
@@ -202,30 +219,37 @@
 
   /* ---------- Model state ---------- */
   .stages { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
-  .stage { position: relative; border: 1px solid var(--border); background: var(--inset); border-radius: 10px; padding: 7px 9px;
-           color: var(--dim); font-size: 11.5px; line-height: 1.35; transition: border-color 0.25s, background 0.25s, box-shadow 0.25s; }
+  .stage:nth-child(1), .explain[data-stage="1"] { --sc: var(--st1); --sci: var(--st1-ink); }
+  .stage:nth-child(2), .explain[data-stage="2"] { --sc: var(--st2); --sci: var(--st2-ink); }
+  .stage:nth-child(3), .explain[data-stage="3"] { --sc: var(--st3); --sci: var(--st3-ink); }
+  .stage:nth-child(4), .explain[data-stage="4"] { --sc: var(--st4); --sci: var(--st4-ink); }
+  .stage { position: relative; border: 1px solid color-mix(in srgb, var(--sc) 28%, transparent); background: color-mix(in srgb, var(--sc) 7%, var(--inset)); border-radius: 10px; padding: 8px 9px 7px;
+           color: var(--dim); font-size: 11.5px; line-height: 1.35; box-shadow: inset 0 2px 0 var(--sc);
+           transition: border-color 0.25s, background 0.25s, box-shadow 0.25s; }
   .stage:not(:last-child)::after { content: ""; position: absolute; right: -9px; top: 50%; width: 6px; height: 6px;
                                    border-top: 1.5px solid var(--dim); border-right: 1.5px solid var(--dim); transform: translateY(-50%) rotate(45deg); }
-  .stage b { display: block; color: var(--muted); font-weight: 600; font-size: 12px; }
+  .stage b { display: block; color: var(--sci); opacity: 0.8; font-weight: 600; font-size: 12px; }
   .stage code { font-family: var(--mono); font-size: 10.5px; }
-  .stage.next { border-style: dashed; border-color: rgba(45, 212, 191, 0.55); }
-  .stage.did { border-color: var(--accent); color: var(--text); box-shadow: 0 0 24px -8px var(--accent-glow);
-               background: linear-gradient(135deg, rgba(45, 212, 191, 0.18), rgba(34, 211, 238, 0.04)); }
-  .stage.did b { color: var(--accent); }
+  .stage.next { border-style: dashed; border-color: var(--sc); background: color-mix(in srgb, var(--sc) 11%, var(--inset)); }
+  .stage.did { border-color: var(--sc); color: var(--text); box-shadow: inset 0 2px 0 var(--sc), 0 0 26px -8px var(--sc);
+               background: color-mix(in srgb, var(--sc) 22%, var(--inset)); }
+  .stage.did b { opacity: 1; }
   @media (max-width: 560px) { .stages { grid-template-columns: repeat(2, minmax(0, 1fr)); } .stage:nth-child(2)::after { display: none; } }
 
-  .explain { position: relative; overflow: hidden; background: linear-gradient(180deg, rgba(31, 38, 56, 0.92), rgba(22, 27, 40, 0.92));
-             border: 1px solid var(--border); border-radius: 12px; padding: 11px 14px 11px 17px; }
-  .explain::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: linear-gradient(180deg, var(--accent), var(--accent2)); }
-  .explain .title { font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); margin-bottom: 4px; font-weight: 700; }
+  .explain:not([data-stage]) { --sc: var(--accent); --sci: var(--accent); }
+  .explain { position: relative; overflow: hidden; background: color-mix(in srgb, var(--sc) 9%, #1a2030);
+             border: 1px solid color-mix(in srgb, var(--sc) 30%, transparent); border-radius: 12px; padding: 11px 14px 11px 17px;
+             transition: background 0.3s, border-color 0.3s; }
+  .explain::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--sc); }
+  .explain .title { font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--sci); margin-bottom: 4px; font-weight: 700; }
   .explain p { margin: 5px 0; }
   .explain .lead { font-weight: 650; font-size: 13.5px; }
   .explain .cap { color: var(--muted); font-size: 12px; margin-bottom: 2px; }
-  .tag { font: 700 10.5px var(--mono); color: #04201c; background: linear-gradient(135deg, var(--accent), var(--accent2)); border-radius: 5px;
+  .tag { font: 700 10.5px var(--mono); color: #0b0d12; background: var(--sc, var(--accent)); border-radius: 5px;
          padding: 1px 6px; margin-right: 7px; vertical-align: 1px; }
   .formula { font-family: var(--mono); font-size: 12.5px; background: rgba(8, 11, 17, 0.6); border: 1px solid var(--border); border-radius: 9px;
              padding: 6px 11px; margin: 6px 0; overflow-x: auto; white-space: nowrap; line-height: 2.3; }
-  .formula .res { color: var(--accent); font-weight: 650; }
+  .formula .res { color: var(--sci, var(--accent)); font-weight: 650; }
   .formula .c { color: var(--dim); }
   .frac { display: inline-flex; flex-direction: column; vertical-align: middle; text-align: center; line-height: 1.3; margin: 0 3px; font-size: 11.5px; }
   .frac > span:first-child { border-bottom: 1px solid currentColor; padding: 0 4px 1px; }
@@ -233,7 +257,7 @@
   .explain ul { margin: 4px 0; padding-left: 18px; }
   .explain li { font-family: var(--mono); font-size: 12px; }
   .explain.flash { animation: eflash 0.9s ease-out; }
-  @keyframes eflash { 0% { background: #22344c; } 100% { } }
+  @keyframes eflash { 0% { background: color-mix(in srgb, var(--sc) 30%, #1d2433); } 100% { } }
 
   .tree-wrap { overflow: auto; max-height: 340px; min-height: 90px; }
   .tree-wrap svg { display: block; margin: 0 auto; overflow: visible; }
@@ -303,7 +327,7 @@
       <h1>XGBoost Visualizer <span class="pill">gradient-boosted trees · binary:logistic</span></h1>
       <p>XGBoost builds many small decision trees, one after another. Each new tree learns to fix the mistakes of the trees before it, and the final prediction is the sum of all the trees, so the model gets a little better with every tree.</p>
     </div>
-    <div class="kbd-hints"><span><kbd>Space</kbd> play/pause</span><span><kbd>→</kbd> step</span><span><kbd>R</kbd> reset</span></div>
+    <div class="kbd-hints"><span><kbd>Space</kbd> play/pause</span><span><kbd>←</kbd> <kbd>→</kbd> step back / forward</span><span><kbd>R</kbd> reset</span></div>
   </header>
 
   <main>
@@ -351,6 +375,9 @@
             <button id="qReset" title="Reset model (R)" aria-label="Reset model">
               <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8a5 5 0 1 0 1.6-3.7"/><path d="M3 2.5v2.8h2.8"/></svg>
             </button>
+            <button id="qBack" title="Step back (←)" aria-label="Step back">
+              <svg viewBox="0 0 16 16" fill="currentColor"><path d="M13 2.8v10.4L5.5 8z"/><rect x="2.8" y="2.8" width="2" height="10.4" rx=".6"/></svg>
+            </button>
             <button id="qStep" title="Step (→)" aria-label="Step">
               <svg viewBox="0 0 16 16" fill="currentColor"><path d="M3 2.8v10.4L10.5 8z"/><rect x="11.2" y="2.8" width="2" height="10.4" rx=".6"/></svg>
             </button>
@@ -375,6 +402,7 @@
       <div class="panel" id="pCtrl">
         <div class="panel-h"><span class="num">02</span><h2>Hyperparameters &amp; Controls</h2></div>
         <div class="controls">
+          <button class="btn" id="backBtn" title="Step back (←)">◂ Back</button>
           <button class="btn" id="stepBtn" title="Step (→)">Step ▸</button>
           <button class="btn primary" id="playBtn" title="Play / Pause (Space)">▶ Play until convergence</button>
           <button class="btn" id="resetBtn" title="Reset model (R)">↺ Reset model</button>
@@ -400,7 +428,8 @@
 
       <!-- 03 Model state -->
       <div class="panel" id="pModel">
-        <div class="panel-h"><span class="num">03</span><h2>Model State</h2><span class="sub" id="ensembleLbl"></span></div>
+        <div class="panel-h"><span class="num">03</span><h2>Model State</h2>
+          <button class="btn small" id="toLoss" title="Jump to the loss curve">↓ Loss curve</button><span class="sub" id="ensembleLbl"></span></div>
         <div class="stack">
           <div class="stages" id="stages"></div>
           <div class="explain" id="explain"></div>
@@ -416,7 +445,8 @@
             <div class="canvas-wrap gain" id="gainWrap"><canvas id="gainCv"></canvas></div>
           </div>
           <div class="card">
-            <div class="card-h">Per-point values <span class="r"><button class="btn small" id="moreBtn">show more</button></span></div>
+            <div class="card-h"><button class="collapse" id="tblToggle" aria-expanded="false" aria-controls="tblWrap"></button>
+              <span class="r"><button class="btn small" id="moreBtn">show more</button></span></div>
             <div class="tbl-wrap scroll" id="tblWrap"></div>
           </div>
         </div>
@@ -570,11 +600,6 @@ function predictTree(tree, x1, x2) {
     nd = tree.nodes[v < nd.split.thr ? nd.left : nd.right];
   }
   return nd.w || 0;
-}
-function predictF(trees, x1, x2) {
-  let F = 0; // base margin F0 = 0  ⇔  base_score p = 0.5
-  for (const t of trees) F += t.eta * predictTree(t, x1, x2);
-  return F;
 }
 
 /**
@@ -863,6 +888,7 @@ function runSelfTest() {
 "use strict";
 (function () {
   const $ = id => document.getElementById(id);
+  const MONO = getComputedStyle(document.body).getPropertyValue("--mono"), SANS = getComputedStyle(document.body).getPropertyValue("--sans");
 
   /* ---------- App state ---------- */
   const P = { nEst: 50, eta: 0.3, maxDepth: 3, lambda: 1, gamma: 0, mcw: 1, tol: 1e-4 };
@@ -1036,7 +1062,7 @@ function runSelfTest() {
 
     // grid + axes
     ctx.lineWidth = 1;
-    ctx.font = "10px " + getComputedStyle(document.body).getPropertyValue("--mono");
+    ctx.font = "10px " + MONO;
     ctx.fillStyle = "#5d667a"; ctx.textAlign = "center"; ctx.textBaseline = "top";
     for (let x = DOMAIN.x0; x <= DOMAIN.x1; x++) {
       const [px] = toPx(x, 0);
@@ -1088,7 +1114,7 @@ function runSelfTest() {
         inNode = new Set(hl.idx);
       }
       // leaf weight labels once they are known
-      ctx.font = "10px " + getComputedStyle(document.body).getPropertyValue("--mono");
+      ctx.font = "10px " + MONO;
       ctx.textAlign = "center"; ctx.textBaseline = "middle";
       for (const nd of tv.nodes) {
         if (nd.status !== "leaf" || nd.w == null) continue;
@@ -1135,7 +1161,7 @@ function runSelfTest() {
       ctx.setLineDash([]);
     }
     if (!data.length) {
-      ctx.fillStyle = "#8a93a8"; ctx.font = "13px " + getComputedStyle(document.body).getPropertyValue("--sans");
+      ctx.fillStyle = "#8a93a8"; ctx.font = "13px " + SANS;
       ctx.textAlign = "center"; ctx.textBaseline = "middle";
       ctx.fillText("No data — spray or click to add points, or press Generate", DR.x + DR.w / 2, DR.y + DR.h / 2);
     } else drawStatusPill(ctx, now);
@@ -1157,7 +1183,7 @@ function runSelfTest() {
     else if (ev.type === "leaves") label = `Tree #${ev.treeNo}  ·  ${ev.pruned && ev.pruned.length ? `pruned ${ev.pruned.length}, ` : ""}leaf weights set`;
     else if (ev.type === "update" || ev.type === "round") label = `Tree #${ev.treeNo} added  ·  loss ${fmt(ev.lossAfter, 4)}`;
     else label = `${data.length} points  ·  press Step (→) to start`;
-    ctx.font = "600 12px " + getComputedStyle(document.body).getPropertyValue("--sans");
+    ctx.font = "600 12px " + SANS;
     const tw = ctx.measureText(label).width + 26, ph = 24, x = DR.x + (DR.w - tw) / 2, y = DR.y + DR.h - ph - 10;
     const glow = done ? Math.max(0, 1 - (now - doneGlowStart) / GLOW_MS) : 0;
     ctx.fillStyle = done ? "rgba(10,30,26,.88)" : "rgba(11,14,21,.84)";
@@ -1269,7 +1295,7 @@ function runSelfTest() {
   }
   function dataChanged(msg, started = S && S.stepCount > 0) {
     pause();
-    S = initState(data);
+    S = initState(data); undo.length = 0;
     prevTable.clear(); viewTree = -1; hoverNode = -1;
     notice = started ? `${msg} Data edited — the model was reset.` : msg;
     renderAll();
@@ -1316,9 +1342,21 @@ function runSelfTest() {
     if (did) renderAll();
     if (playing) rafId = requestAnimationFrame(tick);
   }
+  /* Step history: states are immutable (step() always returns a new object), so going back is just
+     restoring the previous state object. One entry per forward press (one stage, or one whole tree). */
+  const undo = [], UNDO_MAX = 5000;
   function doStep() {
     notice = ""; viewTree = -1; hoverNode = -1;
+    const prev = S;
     S = granularity === "tree" ? stepRound(S, data, P) : step(S, data, P);
+    if (S.stepCount !== prev.stepCount) { undo.push(prev); if (undo.length > UNDO_MAX) undo.shift(); }
+  }
+  function stepBack() {
+    pause();
+    if (!undo.length) { notice = "Already at the start, nothing to go back to."; renderStatus(); return; }
+    S = undo.pop(); viewTree = -1; hoverNode = -1;
+    notice = S.stepCount ? `Stepped back to step ${S.stepCount}.` : "Stepped back to the start.";
+    renderAll();
   }
   function manualStep() {
     if (!data.length) { notice = "No data to train on — add points first."; renderAll(); return; }
@@ -1327,11 +1365,13 @@ function runSelfTest() {
     renderAll();
   }
   function resetModel() {
-    pause(); S = initState(data); prevTable.clear(); viewTree = -1; hoverNode = -1;
+    pause(); S = initState(data); undo.length = 0; prevTable.clear(); viewTree = -1; hoverNode = -1;
     notice = "Model reset: F = 0 for every point."; renderAll();
   }
 
   $("stepBtn").addEventListener("click", manualStep);
+  $("backBtn").addEventListener("click", stepBack);
+  $("qBack").addEventListener("click", stepBack);
   $("playBtn").addEventListener("click", togglePlay);
   $("resetBtn").addEventListener("click", resetModel);
   $("qStep").addEventListener("click", manualStep);
@@ -1385,6 +1425,9 @@ function runSelfTest() {
   $("sizeByG").addEventListener("change", renderData);
   $("showParts").addEventListener("change", renderData);
   $("moreBtn").addEventListener("click", () => { showAll = !showAll; renderTable(false); });
+  let tableOpen = false;
+  $("tblToggle").addEventListener("click", () => { tableOpen = !tableOpen; renderTable(false); });
+  $("toLoss").addEventListener("click", () => $("pLoss").scrollIntoView({ behavior: REDUCED ? "auto" : "smooth", block: "start" }));
   for (const b of $("classSeg").querySelectorAll("button")) b.addEventListener("click", () => {
     addClass = +b.dataset.c;
     $("classSeg").querySelectorAll("button").forEach(x => x.classList.toggle("on", x === b));
@@ -1441,9 +1484,12 @@ function runSelfTest() {
   document.addEventListener("keydown", e => {
     const t = e.target, tag = t.tagName;
     if (tag === "SELECT" || tag === "TEXTAREA" || (tag === "INPUT" && t.type !== "range" && t.type !== "checkbox")) return;
+    // a slider reached with Tab keeps its own ← → (keyboard users); after a mouse drag the slider releases focus (see below)
+    if (tag === "INPUT" && t.type === "range" && (e.key === "ArrowLeft" || e.key === "ArrowRight")) return;
     if (e.ctrlKey || e.metaKey || e.altKey) return;
     if (e.code === "Space") { e.preventDefault(); togglePlay(); }
     else if (e.key === "ArrowRight") { e.preventDefault(); manualStep(); }
+    else if (e.key === "ArrowLeft") { e.preventDefault(); stepBack(); }
     else if (e.key === "r" || e.key === "R") { e.preventDefault(); resetModel(); }
   });
   document.addEventListener("keyup", e => { if (e.code === "Space" && e.target.tagName === "BUTTON") e.preventDefault(); });
@@ -1463,6 +1509,7 @@ function runSelfTest() {
       `<span><span class="k">loss</span> ${fmt(L, 4)}</span>` +
       `<span><span class="k">acc</span> ${data.length ? (accuracy(S.F, data) * 100).toFixed(1) + "%" : "—"}</span>` + badge;
     $("notice").textContent = [notice, dataWarning()].filter(Boolean).join("  ");
+    $("backBtn").disabled = $("qBack").disabled = !undo.length; // nothing to go back to
     const h = S.history, dL = h.length >= 2 ? Math.abs(h[h.length - 2].loss - h[h.length - 1].loss) : null;
     $("crit").innerHTML = `<b>Convergence criterion:</b> stop when <code>|L<sub>t−1</sub> − L<sub>t</sub>| &lt; ε = ${expFmt(P.tol)}</code>
       (loss stopped improving) or when <code>t = n_estimators = ${P.nEst}</code>. Last |ΔL| = <code>${dL == null ? "—" : dL.toExponential(2).replace("e-", "e−")}</code>`;
@@ -1484,7 +1531,8 @@ function runSelfTest() {
         <span class="c">&nbsp;(left + right − parent ${T("similarity", "similarity")})</span><br>
       &nbsp; &nbsp; &nbsp;= ${fr(par(bs.GL) + "²", fmt(bs.HL) + " + " + fmt(lam, 1))} + ${fr(par(bs.GR) + "²", fmt(bs.HR) + " + " + fmt(lam, 1))} − ${fr(par(bs.GL + bs.GR) + "²", fmt(bs.HL + bs.HR) + " + " + fmt(lam, 1))}<br>
       &nbsp; &nbsp; &nbsp;= ${fmt(bs.sL)} + ${fmt(bs.sR)} − ${fmt(bs.sP)} = ${res(fmt(bs.gain, 4))}
-      &nbsp;<span class="c">${bs.gain >= gam ? "≥" : "<"} γ = ${fmt(gam, 2)}</span></div>`;
+      &nbsp;<span class="c">${bs.gain >= gam ? "≥" : "<"} γ = ${fmt(gam, 2)}</span></div>
+      <p class="cap">Note: the XGBoost paper writes Gain = ½[ … ] − γ. The xgboost library (and this app) leaves out the ½ and compares Gain with γ, so the numbers here match the real library. The best split is the same either way.</p>`;
   }
   function updateFormula(ev) {
     return `<div class="formula">F ← F + η·w = ${par(ev.Fold)} + ${fmt(ev.eta, 2)}·${par(ev.w)} = ${res(fmt(ev.Fnew))}<br>
@@ -1586,6 +1634,8 @@ function runSelfTest() {
 
   function renderExplain() {
     const box = $("explain");
+    const stg = { grad: 1, split: 2, leaves: 3, update: 4, round: 4 }[S.event.type];
+    if (stg) box.dataset.stage = stg; else delete box.dataset.stage;
     box.innerHTML = `<div class="title">What just happened? <span style="float:right;text-transform:none;letter-spacing:0;font-weight:400;color:var(--dim)">hover <span class="term" style="cursor:default">dotted words</span> for meanings</span></div>` + explainHTML(S.event);
     if (S.stepCount !== lastEventKey) {
       lastEventKey = S.stepCount;
@@ -1687,16 +1737,15 @@ function runSelfTest() {
     const ev = S.event, cv = $("gainCv");
     const { ctx, w, h } = fitCanvas(cv);
     ctx.clearRect(0, 0, w, h);
-    const mono = getComputedStyle(document.body).getPropertyValue("--mono");
-    ctx.font = "10px " + mono;
+    ctx.font = "10px " + MONO;
     if (ev.type !== "split" || !ev.scans) {
       $("gainLbl").textContent = "";
       ctx.fillStyle = "#5d667a"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
-      ctx.font = "12px " + getComputedStyle(document.body).getPropertyValue("--sans");
+      ctx.font = "12px " + SANS;
       ctx.fillText("Shown during a “split a node” step (one-stage mode).", w / 2, h / 2);
       return;
     }
-    $("gainLbl").textContent = `node #${ev.nodeId} · ${ev.nCand} candidates`;
+    $("gainLbl").innerHTML = `<span style="color:#2dd4bf">━ threshold on x₁</span> &nbsp;<span style="color:#a78bfa">━ x₂</span> &nbsp;· node #${ev.nodeId} · ${ev.nCand} candidates`;
     const m = { l: 44, r: 10, t: 10, b: 22 }, pw = w - m.l - m.r, ph = h - m.t - m.b;
     const all = ev.scans[0].concat(ev.scans[1]);
     let lo = 0, hi = 0;
@@ -1742,18 +1791,20 @@ function runSelfTest() {
     if (ev.best) {
       const bx = X(ev.best.thr), by = Y(ev.best.gain);
       ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(bx, by, 4.5, 0, 7); ctx.fill();
-      ctx.font = "11px " + mono; ctx.textAlign = bx > m.l + pw * 0.7 ? "right" : "left"; ctx.textBaseline = "bottom";
+      ctx.font = "11px " + MONO; ctx.textAlign = bx > m.l + pw * 0.7 ? "right" : "left"; ctx.textBaseline = "bottom";
       ctx.fillText(`best ${FEAT[ev.best.f]}<${fmt(ev.best.thr, 2)}  gain ${fmt(ev.best.gain, 3)}`, bx + (ctx.textAlign === "left" ? 7 : -7), by - 4);
     }
-    // legend
-    ctx.font = "10.5px " + mono; ctx.textAlign = "right"; ctx.textBaseline = "top";
-    ctx.fillStyle = colors[1]; ctx.fillText("— threshold on x₂", m.l + pw - 2, m.t + 2);
-    ctx.fillStyle = colors[0]; ctx.fillText("— threshold on x₁", m.l + pw - 2, m.t + 15);
+    // (legend lives in the card header, so it can never overlap the "best" label)
   }
 
   /* ---------- Per-point table ---------- */
   function renderTable(flash = true) {
     const n = data.length, wrap = $("tblWrap");
+    // collapsed by default to keep Model State short; the header says what is inside and how many points
+    $("tblToggle").innerHTML = `${tableOpen ? "▾" : "▸"} Per-point values<span class="cnt">${n} points${tableOpen ? "" : " · click to see F, p, g, h for every point"}</span>`;
+    $("tblToggle").setAttribute("aria-expanded", tableOpen);
+    wrap.style.display = tableOpen ? "" : "none";
+    if (!tableOpen) { $("moreBtn").style.display = "none"; return; }
     if (!n) { wrap.innerHTML = `<div class="empty">No points.</div>`; $("moreBtn").style.display = "none"; return; }
     const LIMIT = 8;
     $("moreBtn").style.display = n > LIMIT ? "" : "none";
@@ -1794,11 +1845,10 @@ function runSelfTest() {
   function renderLoss() {
     const { ctx, w, h } = fitCanvas(lossCv);
     ctx.clearRect(0, 0, w, h);
-    const mono = getComputedStyle(document.body).getPropertyValue("--mono");
     const m = { l: 52, r: 16, t: 14, b: 36 };
     LR = { x: m.l, y: m.t, w: w - m.l - m.r, h: h - m.t - m.b };
     const hist = S.history;
-    ctx.font = "10px " + mono;
+    ctx.font = "10px " + MONO;
     if (!hist.length) {
       ctx.fillStyle = "#5d667a"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
       ctx.fillText("No data — nothing to plot", w / 2, h / 2); $("lossFoot").innerHTML = ""; return;
@@ -1826,7 +1876,7 @@ function runSelfTest() {
     }
     ctx.strokeStyle = "rgba(255,255,255,.18)";
     ctx.beginPath(); ctx.moveTo(LR.x + .5, LR.y); ctx.lineTo(LR.x + .5, LR.y + LR.h); ctx.stroke();
-    ctx.fillStyle = "#8a93a8"; ctx.font = "11px " + mono;
+    ctx.fillStyle = "#8a93a8"; ctx.font = "11px " + MONO;
     ctx.fillText("boosting round t (number of trees)", LR.x + LR.w / 2, LR.y + LR.h + 20);
     ctx.save(); ctx.translate(13, LR.y + LR.h / 2); ctx.rotate(-Math.PI / 2); ctx.textBaseline = "middle";
     ctx.fillText("log-loss L", 0, 0); ctx.restore();
@@ -1847,7 +1897,7 @@ function runSelfTest() {
     const last = hist[hist.length - 1], lx = X(last.round), ly = Y(last.loss);
     ctx.fillStyle = "rgba(45,212,191,.25)"; ctx.beginPath(); ctx.arc(lx, ly, 8, 0, 7); ctx.fill();
     ctx.fillStyle = "#2dd4bf"; ctx.beginPath(); ctx.arc(lx, ly, 4, 0, 7); ctx.fill();
-    ctx.fillStyle = "#e6e9f0"; ctx.font = "11px " + mono; ctx.textBaseline = "bottom";
+    ctx.fillStyle = "#e6e9f0"; ctx.font = "11px " + MONO; ctx.textBaseline = "bottom";
     ctx.textAlign = lx > LR.x + LR.w - 80 ? "right" : "left";
     ctx.fillText(fmt(last.loss, 4), lx + (ctx.textAlign === "left" ? 9 : -9), ly - 6);
     // hover
@@ -1893,7 +1943,12 @@ function runSelfTest() {
   buildHP();
   // slider tracks fill up to the thumb (CSS reads --p)
   function paintRange(el) { el.style.setProperty("--p", ((el.value - el.min) / (el.max - el.min)) * 100 + "%"); }
-  document.querySelectorAll("input[type=range]").forEach(el => { paintRange(el); el.addEventListener("input", () => paintRange(el)); });
+  document.querySelectorAll("input[type=range]").forEach(el => {
+    paintRange(el);
+    el.addEventListener("input", () => paintRange(el));
+    // after a mouse/touch drag, give the keyboard back to the app so ← → keep stepping the model
+    el.addEventListener("pointerup", () => el.blur());
+  });
   setPlayBtn();
   data = generateDataset("moons", 120, 0.2, 42);
   S = initState(data);
