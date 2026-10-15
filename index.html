@@ -179,21 +179,10 @@
   .canvas-wrap.data { aspect-ratio: 4 / 3; cursor: crosshair; }
   /* on short screens (e.g. 13" laptops) shrink the canvas, keeping 4:3, so the whole plot stays in view */
   @media (min-width: 901px) { .canvas-wrap.data { width: min(100%, calc((100vh - 360px) * 4 / 3)); min-width: 320px; margin-inline: auto; } }
-  /* quick playback buttons floating on the canvas (same actions as panel 02) */
-  .canvas-ctrl { position: absolute; top: 8px; right: 8px; z-index: 4; display: flex; gap: 2px; padding: 3px; border-radius: 11px;
-                 background: rgba(11, 14, 21, 0.78); border: 1px solid var(--border2); box-shadow: 0 8px 20px -10px rgba(0, 0, 0, 0.9);
-                 backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); opacity: 0.88; transition: opacity 0.15s; }
-  .canvas-ctrl:hover { opacity: 1; }
-  .canvas-ctrl button { width: 28px; height: 26px; display: grid; place-items: center; border: 0; border-radius: 8px; background: transparent;
-                        color: var(--text); cursor: pointer; transition: background 0.15s, color 0.15s; }
-  .canvas-ctrl button:hover { background: var(--accent-soft); color: var(--accent); }
   /* collapsible card header (per-point table) */
   .collapse { background: none; border: 0; padding: 0; cursor: pointer; color: inherit; font: inherit; letter-spacing: inherit; text-transform: inherit; }
   .collapse:hover { color: var(--text); }
   .collapse .cnt { text-transform: none; letter-spacing: 0; color: var(--dim); margin-left: 6px; font-weight: 400; }
-  .canvas-ctrl button:disabled { opacity: 0.35; cursor: default; background: transparent; color: var(--text); }
-  .canvas-ctrl button.play { background: linear-gradient(135deg, var(--accent), var(--accent2)); color: #04201c; }
-  .canvas-ctrl svg { width: 14px; height: 14px; display: block; }
   /* glossary: dotted words show a plain-English definition on hover */
   .term { border-bottom: 1px dotted rgba(45, 212, 191, 0.75); cursor: help; }
   .term:hover { color: var(--accent); }
@@ -371,18 +360,6 @@
         </div>
         <div class="canvas-wrap data" id="dataWrap">
           <canvas id="dataCv"></canvas>
-          <div class="canvas-ctrl" aria-label="Quick controls">
-            <button id="qReset" title="Reset model (R)" aria-label="Reset model">
-              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8a5 5 0 1 0 1.6-3.7"/><path d="M3 2.5v2.8h2.8"/></svg>
-            </button>
-            <button id="qBack" title="Step back (←)" aria-label="Step back">
-              <svg viewBox="0 0 16 16" fill="currentColor"><path d="M13 2.8v10.4L5.5 8z"/><rect x="2.8" y="2.8" width="2" height="10.4" rx=".6"/></svg>
-            </button>
-            <button id="qStep" title="Step (→)" aria-label="Step">
-              <svg viewBox="0 0 16 16" fill="currentColor"><path d="M3 2.8v10.4L10.5 8z"/><rect x="11.2" y="2.8" width="2" height="10.4" rx=".6"/></svg>
-            </button>
-            <button id="qPlay" class="play" title="Play / Pause (Space)" aria-label="Play or pause"></button>
-          </div>
           <div class="tip" id="dataTip"></div>
         </div>
         <div class="legend">
@@ -1113,19 +1090,6 @@ function runSelfTest() {
         ctx.strokeRect(x0 + 1, y0 + 1, x1 - x0 - 2, y1 - y0 - 2); ctx.setLineDash([]);
         inNode = new Set(hl.idx);
       }
-      // leaf weight labels once they are known
-      ctx.font = "10px " + MONO;
-      ctx.textAlign = "center"; ctx.textBaseline = "middle";
-      for (const nd of tv.nodes) {
-        if (nd.status !== "leaf" || nd.w == null) continue;
-        const [x0, y0] = toPx(nd.bounds.x0, nd.bounds.y1), [x1, y1] = toPx(nd.bounds.x1, nd.bounds.y0);
-        if (x1 - x0 < 58 || y1 - y0 < 22) continue;
-        const txt = `L${nd.leafNo} w=${fmt(nd.w, 2)}`, tw = ctx.measureText(txt).width + 12;
-        const cx = (x0 + x1) / 2, cy = y0 + 14;
-        ctx.fillStyle = "rgba(11,14,21,.85)"; pill(ctx, cx - tw / 2, cy - 8, tw, 16, 8); ctx.fill();
-        ctx.strokeStyle = nd.w >= 0 ? "rgba(245,161,66,.45)" : "rgba(91,141,239,.45)"; ctx.lineWidth = 1; ctx.stroke();
-        ctx.fillStyle = nd.w >= 0 ? "#ffc27d" : "#9db8ff"; ctx.fillText(txt, cx, cy);
-      }
     }
 
     // points
@@ -1151,6 +1115,21 @@ function runSelfTest() {
       const [px, py] = toPx(data[hoverIdx].x1, data[hoverIdx].x2);
       ctx.strokeStyle = tool === "erase" ? "#f87171" : "#fff"; ctx.lineWidth = tool === "erase" ? 2.2 : 1.5;
       ctx.beginPath(); ctx.arc(px, py, 8, 0, Math.PI * 2); ctx.stroke();
+    }
+    // leaf weight labels: drawn after the points and rings so no data point can cover them
+    if (tv && (showParts || hoverNode >= 0)) {
+      ctx.font = "10px " + MONO;
+      ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      for (const nd of tv.nodes) {
+        if (nd.status !== "leaf" || nd.w == null) continue;
+        const [x0, y0] = toPx(nd.bounds.x0, nd.bounds.y1), [x1, y1] = toPx(nd.bounds.x1, nd.bounds.y0);
+        if (x1 - x0 < 58 || y1 - y0 < 22) continue;
+        const txt = `L${nd.leafNo} w=${fmt(nd.w, 2)}`, tw = ctx.measureText(txt).width + 12;
+        const cx = (x0 + x1) / 2, cy = y0 + 14;
+        ctx.fillStyle = "rgba(11,14,21,.88)"; pill(ctx, cx - tw / 2, cy - 8, tw, 16, 8); ctx.fill();
+        ctx.strokeStyle = nd.w >= 0 ? "rgba(245,161,66,.45)" : "rgba(91,141,239,.45)"; ctx.lineWidth = 1; ctx.stroke();
+        ctx.fillStyle = nd.w >= 0 ? "#ffc27d" : "#9db8ff"; ctx.fillText(txt, cx, cy);
+      }
     }
     // nozzle ring for the Spray / Erase tools
     if (brush && tool !== "point") {
@@ -1310,12 +1289,7 @@ function runSelfTest() {
   }
 
   /* ---------- Controls ---------- */
-  const ICON_PLAY = `<svg viewBox="0 0 16 16" fill="currentColor"><path d="M4 2.6v10.8L13 8z"/></svg>`;
-  const ICON_PAUSE = `<svg viewBox="0 0 16 16" fill="currentColor"><rect x="3.5" y="2.8" width="3" height="10.4" rx=".8"/><rect x="9.5" y="2.8" width="3" height="10.4" rx=".8"/></svg>`;
-  function setPlayBtn() {
-    $("playBtn").textContent = playing ? "❚❚ Pause" : "▶ Play until convergence";
-    $("qPlay").innerHTML = playing ? ICON_PAUSE : ICON_PLAY;
-  }
+  function setPlayBtn() { $("playBtn").textContent = playing ? "❚❚ Pause" : "▶ Play until convergence"; }
   let rafId = null, lastT = 0, acc = 0;
   function play() {
     if (!data.length) { notice = "Add some points first."; renderStatus(); return; }
@@ -1371,12 +1345,8 @@ function runSelfTest() {
 
   $("stepBtn").addEventListener("click", manualStep);
   $("backBtn").addEventListener("click", stepBack);
-  $("qBack").addEventListener("click", stepBack);
   $("playBtn").addEventListener("click", togglePlay);
   $("resetBtn").addEventListener("click", resetModel);
-  $("qStep").addEventListener("click", manualStep);
-  $("qPlay").addEventListener("click", togglePlay);
-  $("qReset").addEventListener("click", resetModel);
 
   /* ---------- Glossary: plain-English meaning of each technical word (hover a dotted word) ---------- */
   const GLOSSARY = {
@@ -1509,7 +1479,7 @@ function runSelfTest() {
       `<span><span class="k">loss</span> ${fmt(L, 4)}</span>` +
       `<span><span class="k">acc</span> ${data.length ? (accuracy(S.F, data) * 100).toFixed(1) + "%" : "—"}</span>` + badge;
     $("notice").textContent = [notice, dataWarning()].filter(Boolean).join("  ");
-    $("backBtn").disabled = $("qBack").disabled = !undo.length; // nothing to go back to
+    $("backBtn").disabled = !undo.length; // nothing to go back to
     const h = S.history, dL = h.length >= 2 ? Math.abs(h[h.length - 2].loss - h[h.length - 1].loss) : null;
     $("crit").innerHTML = `<b>Convergence criterion:</b> stop when <code>|L<sub>t−1</sub> − L<sub>t</sub>| &lt; ε = ${expFmt(P.tol)}</code>
       (loss stopped improving) or when <code>t = n_estimators = ${P.nEst}</code>. Last |ΔL| = <code>${dL == null ? "—" : dL.toExponential(2).replace("e-", "e−")}</code>`;
