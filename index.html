@@ -171,7 +171,7 @@
   .hp .dd { position: relative; justify-self: center; }
   .hp .val { width: 68px; font-family: var(--mono); font-size: 12.5px; line-height: 18px; color: var(--accent); cursor: pointer;
              text-align: center; border: 1px solid rgba(45, 212, 191, 0.28); border-radius: 6px;
-             padding: 1px 17px 1px 7px; background: var(--accent-soft) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5'%3E%3Cpath d='M0 0h8L4 5z' fill='%232dd4bf'/%3E%3C/svg%3E") no-repeat right 6px center; }
+             padding: 1px 14px 1px 10px; background: var(--accent-soft) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5'%3E%3Cpath d='M0 0h8L4 5z' fill='%232dd4bf'/%3E%3C/svg%3E") no-repeat right 6px center; }
   /* all value boxes share one width (the width the widest value, tolerance "1.0e−4", needs) */
   .hp .val:hover { border-color: rgba(45, 212, 191, 0.6); }
   .ddlist { position: absolute; z-index: 40; right: 0; top: calc(100% + 4px); min-width: 100%; padding: 3px; display: flex; flex-direction: column; gap: 1px;
@@ -184,14 +184,14 @@
   /* laptops: smaller dropdowns (their open list uses the same font size, so it shrinks too) */
   @media (max-width: 1600px) {
     #hpRows .hp { grid-template-columns: 200px minmax(0, 1fr) 66px; }
-    .hp .val { font-size: 11.5px; line-height: 16px; width: 62px; padding: 1px 15px 1px 6px; background-position: right 5px center; }
+    .hp .val { font-size: 11.5px; line-height: 16px; width: 62px; padding: 1px 13px 1px 8px; background-position: right 5px center; }
     .ddlist button { font-size: 11.5px; line-height: 17px; }
     #shape { font-size: 12px; padding: 3px 7px; }
     #seed { font-size: 12px; padding: 3px 7px; width: 64px; }
   }
   @media (max-width: 1300px) {
     #hpRows .hp { grid-template-columns: 180px minmax(0, 1fr) 60px; }
-    .hp .val { font-size: 11px; line-height: 15px; width: 58px; padding: 0 14px 0 5px; }
+    .hp .val { font-size: 11px; line-height: 15px; width: 58px; padding: 0 12px 0 7px; }
     .ddlist button { font-size: 11px; line-height: 16px; padding: 1px 8px; }
     #shape { font-size: 11.5px; }
   }
@@ -965,7 +965,13 @@ function runSelfTest() {
   const fr = (a, b) => `<span class="frac"><span>${a}</span><span>${b}</span></span>`;
   const res = v => `<span class="res">${v}</span>`;
   const cls = y => `<span class="dot" style="background:var(--c${y})"></span>`;
-  const expFmt = v => v.toExponential(1).replace("e-", "e−");
+  // powers of ten without the "e": 1e-4 → 10⁻⁴, 3.2e-5 → 3.2×10⁻⁵
+  const SUP = { "-": "⁻", 0: "⁰", 1: "¹", 2: "²", 3: "³", 4: "⁴", 5: "⁵", 6: "⁶", 7: "⁷", 8: "⁸", 9: "⁹" };
+  function expFmt(v, d = 1) {
+    if (!v) return "0";
+    const [m, e] = Math.abs(v).toExponential(d).split("e"), pow = "10" + String(+e).replace(/./g, ch => SUP[ch]);
+    return (v < 0 ? "−" : "") + (+m === 1 ? pow : m + "×" + pow);
+  }
 
   /* ---------- Hyperparameter rows ---------- */
   const HP = [
@@ -1671,7 +1677,7 @@ function runSelfTest() {
     $("crit").innerHTML = `<b>Convergence criterion:</b> stop when <code>|L<sub>t−1</sub> − L<sub>t</sub>| &lt; ε = ${expFmt(P.tol)}</code>
       (loss stopped improving) or <code>t = n_estimators = ${P.nEst}</code>.` +
       // "last |ΔL|" only appears once there is a value (after the first tree)
-      (dL == null ? "" : ` last |ΔL| = <code>${dL.toExponential(2).replace("e-", "e−")}</code>`);
+      (dL == null ? "" : ` last |ΔL| = <code>${expFmt(dL, 2)}</code>`);
     fitCrit();
   }
 
@@ -1700,7 +1706,7 @@ function runSelfTest() {
   function updateFormula(ev) {
     return `<div class="formula">F ← F + η·w = ${par(ev.Fold)} + ${fmt(ev.eta, 2)}·${par(ev.w)} = ${res(fmt(ev.Fnew))}<br>
       p = σ(F): ${fmt(ev.pOld)} → ${res(fmt(ev.pNew))} &nbsp;<span class="c">(true label y = ${ev.y}; p ${(ev.y ? ev.pNew > ev.pOld : ev.pNew < ev.pOld) ? "moved toward" : "moved away from"} y)</span></div>
-      <div class="formula">L: ${fmt(ev.lossBefore, 5)} → ${res(fmt(ev.lossAfter, 5))} &nbsp; |ΔL| = ${Math.abs(ev.lossBefore - ev.lossAfter).toExponential(2).replace("e-", "e−")} &nbsp;<span class="c">vs ε = ${expFmt(ev.tol)}</span></div>
+      <div class="formula">L: ${fmt(ev.lossBefore, 5)} → ${res(fmt(ev.lossAfter, 5))} &nbsp; |ΔL| = ${expFmt(Math.abs(ev.lossBefore - ev.lossAfter), 2)} &nbsp;<span class="c">vs ε = ${expFmt(ev.tol)}</span></div>
       <p>${ev.stop === "tol" ? `<b style="color:var(--sci)">Converged ✓</b> — the loss improved by less than ε, so another tree would barely help.`
         : ev.stop === "max" ? `<b style="color:var(--sci)">Done ✓</b> — reached n_estimators = ${ev.nEst} trees.` : "Next: recompute gradients with the new scores and grow the next tree."}</p>`;
   }
