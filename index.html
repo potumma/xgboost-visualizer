@@ -169,9 +169,10 @@
   .hp .name { font-family: var(--mono); font-size: 13px; letter-spacing: 0.01em; color: var(--text); display: flex; align-items: center; gap: 8px; }
   .hp .name i { color: var(--accent); font: 600 12px/18px var(--sans); font-style: normal; padding: 0 7px; border-radius: 6px; background: var(--accent-soft); }
   .hp .dd { position: relative; justify-self: center; }
-  .hp .val { min-width: 54px; font-family: var(--mono); font-size: 12.5px; line-height: 18px; color: var(--accent); cursor: pointer;
+  .hp .val { width: 68px; font-family: var(--mono); font-size: 12.5px; line-height: 18px; color: var(--accent); cursor: pointer;
              text-align: center; border: 1px solid rgba(45, 212, 191, 0.28); border-radius: 6px;
              padding: 1px 17px 1px 7px; background: var(--accent-soft) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5'%3E%3Cpath d='M0 0h8L4 5z' fill='%232dd4bf'/%3E%3C/svg%3E") no-repeat right 6px center; }
+  /* all value boxes share one width (the width the widest value, tolerance "1.0e−4", needs) */
   .hp .val:hover { border-color: rgba(45, 212, 191, 0.6); }
   .ddlist { position: absolute; z-index: 40; right: 0; top: calc(100% + 4px); min-width: 100%; padding: 3px; display: flex; flex-direction: column; gap: 1px;
              background: #141a27; border: 1px solid var(--border2); border-radius: 8px; box-shadow: 0 12px 28px -8px rgba(0, 0, 0, 0.85); }
@@ -183,14 +184,14 @@
   /* laptops: smaller dropdowns (their open list uses the same font size, so it shrinks too) */
   @media (max-width: 1600px) {
     #hpRows .hp { grid-template-columns: 200px minmax(0, 1fr) 66px; }
-    .hp .val { font-size: 11.5px; line-height: 16px; min-width: 46px; padding: 1px 15px 1px 6px; background-position: right 5px center; }
+    .hp .val { font-size: 11.5px; line-height: 16px; width: 62px; padding: 1px 15px 1px 6px; background-position: right 5px center; }
     .ddlist button { font-size: 11.5px; line-height: 17px; }
     #shape { font-size: 12px; padding: 3px 7px; }
     #seed { font-size: 12px; padding: 3px 7px; width: 64px; }
   }
   @media (max-width: 1300px) {
     #hpRows .hp { grid-template-columns: 180px minmax(0, 1fr) 60px; }
-    .hp .val { font-size: 11px; line-height: 15px; min-width: 42px; padding: 0 14px 0 5px; }
+    .hp .val { font-size: 11px; line-height: 15px; width: 58px; padding: 0 14px 0 5px; }
     .ddlist button { font-size: 11px; line-height: 16px; padding: 1px 8px; }
     #shape { font-size: 11.5px; }
   }
@@ -1668,7 +1669,9 @@ function runSelfTest() {
     $("backBtn").disabled = !undo.length; // nothing to go back to
     const h = S.history, dL = h.length >= 2 ? Math.abs(h[h.length - 2].loss - h[h.length - 1].loss) : null;
     $("crit").innerHTML = `<b>Convergence criterion:</b> stop when <code>|L<sub>t−1</sub> − L<sub>t</sub>| &lt; ε = ${expFmt(P.tol)}</code>
-      (loss stopped improving) or <code>t = n_estimators = ${P.nEst}</code>. last |ΔL| = <code>${dL == null ? "—" : dL.toExponential(2).replace("e-", "e−")}</code>`;
+      (loss stopped improving) or <code>t = n_estimators = ${P.nEst}</code>.` +
+      // "last |ΔL|" only appears once there is a value (after the first tree)
+      (dL == null ? "" : ` last |ΔL| = <code>${dL.toExponential(2).replace("e-", "e−")}</code>`);
     fitCrit();
   }
 
