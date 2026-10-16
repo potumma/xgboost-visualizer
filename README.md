@@ -21,21 +21,23 @@ One boosting round has 4 stages, and the app lets you step through each one:
 
 | Action | How |
 |---|---|
-| Make data | Pick a shape (moons, circles, XOR, spirals…) and press **Generate**, or **Spray** points on the canvas |
+| Make data | Pick a shape (moons, circles, XOR, spirals…), points, noise or seed and the canvas updates instantly. **Random** picks a random seed. Or **Spray** points on the canvas |
 | Edit data | **Point** adds one point, **Erase** removes points under the nozzle, right-click deletes one point |
-| Run one step | **Step** button or <kbd>→</kbd> |
-| Go back one step | **◂ Back** button or <kbd>←</kbd> |
-| Train to the end | **Play until convergence** or <kbd>Space</kbd> |
-| Start over | **Reset model** or <kbd>R</kbd> |
+| Run one step | **Step** button, <kbd>→</kbd>, or **›** in the "What just happened?" box |
+| Go back one step | **◂ Back** button, <kbd>←</kbd>, or **‹** in the "What just happened?" box |
+| Jump to a stage | Click one of the 4 stage boxes in Model State |
+| Train to the end | **Play until convergence** or <kbd>Space</kbd> (up to 5 steps per second), or **⏭ Skip to end** to finish instantly |
+| Start over | **↺ Reset** or <kbd>R</kbd> |
+| Set a hyperparameter | Drag its slider, or pick a common value from the dropdown next to it |
 | Learn the words | Hover any dotted word in the explanation box |
-| Explore a tree | Hover a tree node to highlight its region on the canvas; use ◀ ▶ to browse past trees |
+| Explore a tree | Hover a tree node to highlight its region on the canvas; use ◀ ▶ to browse past trees; zoom big trees with − / + / Fit or Ctrl + scroll, and drag to move around |
 
 Training stops when the loss improves by less than ε, or when it reaches `n_estimators` trees.
 
 ## Features
 
 - **Data canvas** showing decision regions, the p = 0.5 boundary and the current tree's splits, updated live
-- **Model state**: the 4-stage pipeline, a "What just happened?" box with worked formulas, the tree diagram, a gain chart for every threshold, and a per-point table (F, p, g, h)
+- **Model state**: the 4-stage pipeline (green → yellow → orange → red), a "What just happened?" box with worked formulas, a zoomable tree diagram, a gain chart for every threshold, and a per-point table (F, p, g, h)
 - **Loss curve** of training log-loss after each tree
 - **Hyperparameters** named as in the XGBoost library: `n_estimators`, `learning_rate`, `max_depth`, `reg_lambda`, `gamma`, `min_child_weight`
 - Single `index.html` file with no libraries. It works offline and on phones.

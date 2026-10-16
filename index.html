@@ -25,10 +25,10 @@
     --warn: #fbbf24;
     --ok: #34d399;
     /* one color per algorithm stage, used only in the Model State panel (base = marks, -ink = text) */
-    --st1: #9085e9;  --st1-ink: #b9b1f7;   /* 1 · gradients        violet  */
-    --st2: #199e70;  --st2-ink: #4fd8ac;   /* 2 · splits           teal    */
-    --st3: #c98500;  --st3-ink: #f2b93b;   /* 3 · prune + leaves   gold    */
-    --st4: #d55181;  --st4-ink: #f28cb6;   /* 4 · update           magenta */
+    --st1: #22c55e;  --st1-ink: #4ade80;   /* 1 · gradients        green  */
+    --st2: #fde047;  --st2-ink: #fef08a;   /* 2 · splits           yellow */
+    --st3: #fb923c;  --st3-ink: #fdba74;   /* 3 · prune + leaves   orange */
+    --st4: #e11d48;  --st4-ink: #fb7185;   /* 4 · update           red    */
     --radius: 14px;
     --shadow: inset 0 1px 0 rgba(255, 255, 255, 0.045), 0 14px 34px -14px rgba(0, 0, 0, 0.7), 0 2px 6px rgba(0, 0, 0, 0.25);
     --mono: "JetBrains Mono", "Fira Code", "Cascadia Code", ui-monospace, SFMono-Regular, Consolas, monospace;
@@ -46,7 +46,7 @@
   :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
   /* ---------- App grid: header / body / footer ---------- */
-  .app { height: 100vh; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; }
+  .app { height: 100vh; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; grid-template-columns: minmax(0, 1fr); }
   header { display: flex; align-items: center; gap: 16px; padding: 11px 22px; border-bottom: 1px solid var(--border);
            background: rgba(12, 16, 24, 0.7); backdrop-filter: blur(16px) saturate(140%); -webkit-backdrop-filter: blur(16px) saturate(140%); }
   .logo { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; flex-shrink: 0;
@@ -56,8 +56,15 @@
   header h1 { margin: 0; font-size: 18px; font-weight: 700; letter-spacing: -0.01em; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
   header h1 .pill { font: 500 11px var(--mono); letter-spacing: 0; color: var(--accent); background: var(--accent-soft);
                     border: 1px solid rgba(45, 212, 191, 0.3); border-radius: 99px; padding: 2px 10px; }
-  header p { margin: 3px 0 0; color: var(--muted); font-size: 12.5px; max-width: 920px; }
+  /* the brief explanation: one line on laptop and desktop screens */
+  header p { margin: 5px 0 0; color: var(--muted); font-size: 12.5px; }
+  header p em { font-style: normal; color: var(--text); }
   .kbd-hints { margin-left: auto; display: flex; gap: 12px; color: var(--muted); font-size: 11.5px; white-space: nowrap; }
+  /* laptops: stack the shortcuts so the explanation keeps one line */
+  /* laptops: the shortcuts stay on one line, with shorter labels so the description keeps one line too */
+  .kbd-hints > span { display: inline-flex; align-items: center; }
+  .kbd-hints kbd { margin-right: 4px; }
+  @media (max-width: 1500px) { .kbd-hints { gap: 10px; font-size: 11px; } .kbd-hints kbd { font-size: 10px; padding: 0 5px; } .kbd-hints .long { display: none; } }
   kbd { font-family: var(--mono); font-size: 10.5px; border: 1px solid var(--border2); border-bottom-width: 2px; border-radius: 5px;
         padding: 0 6px; background: rgba(255, 255, 255, 0.04); color: var(--text); }
 
@@ -83,7 +90,7 @@
   @media (max-width: 600px) {
     #hpRows .hp { grid-template-columns: minmax(0, 1fr) auto; }
     .hp .name { grid-column: 1; grid-row: 1; }
-    .hp .val { grid-column: 2; grid-row: 1; }
+    .hp .dd { grid-column: 2; grid-row: 1; }
     .hp input[type=range] { grid-column: 1 / -1; grid-row: 2; }
     .hp .hint { grid-row: 3; }
   }
@@ -97,10 +104,12 @@
 
   /* ---------- Panels ---------- */
   .panel { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; flex-shrink: 0; box-shadow: var(--shadow); }
-  .panel-h { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+  .panel-h { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; margin-bottom: 12px; }
   .panel-h .num { font: 700 10.5px var(--mono); color: #04201c; background: linear-gradient(135deg, var(--accent), var(--accent2));
                   border-radius: 6px; padding: 2px 6px; box-shadow: 0 0 14px -3px var(--accent-glow); }
   .panel-h h2 { margin: 0; font-size: 13px; text-transform: uppercase; letter-spacing: 0.1em; font-weight: 650; }
+  .panel-h .mode { font-size: 11.5px; color: var(--muted); background: var(--inset); border: 1px solid var(--border2); border-radius: 99px; padding: 2px 10px; white-space: nowrap; }
+  .panel-h .mode b { color: var(--accent); font-weight: 600; }
   .panel-h .sub { margin-left: auto; color: var(--muted); font-size: 11.5px; text-align: right; }
   .card { background: var(--inset); border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px; }
   .card-h { display: flex; align-items: center; gap: 8px; font-size: 11.5px; color: var(--muted); text-transform: uppercase;
@@ -111,17 +120,23 @@
   /* ---------- Controls ---------- */
   .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-bottom: 10px; }
   .field { display: flex; align-items: center; gap: 7px; color: var(--muted); font-size: 12px; }
+  /* toolbar groups wrap as a whole (never one lonely control on a line); slider groups stretch to fill the row */
+  .tgroup { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+  .tgroup.sliders { flex: 1 1 300px; }
+  .tgroup.sliders .field { flex: 1 1 0; min-width: 140px; }
+  .tgroup.sliders input[type=range] { flex: 1; width: auto; min-width: 56px; }
   .field .v { font-family: var(--mono); color: var(--text); min-width: 30px; }
   select, input[type=number] { background: var(--inset); border: 1px solid var(--border2); border-radius: 8px; padding: 5px 9px; outline: none;
                                transition: border-color 0.15s; }
   select:hover, input[type=number]:hover { border-color: rgba(255, 255, 255, 0.2); }
   select:focus, input[type=number]:focus { border-color: var(--accent); }
-  input[type=number] { width: 76px; font-family: var(--mono); }
+  input[type=number] { width: 76px; font-family: var(--mono); text-align: center; -moz-appearance: textfield; appearance: textfield; }
+  input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
   .btn { background: linear-gradient(180deg, #232b3c, #1b2131); border: 1px solid var(--border2); border-radius: 9px; padding: 6px 13px;
          cursor: pointer; white-space: nowrap; transition: border-color 0.15s, box-shadow 0.15s, filter 0.15s, transform 0.06s; }
   .btn:hover { border-color: rgba(45, 212, 191, 0.6); box-shadow: 0 0 0 3px rgba(45, 212, 191, 0.08); }
   .btn:active { transform: translateY(1px); }
-  .btn.primary { background: linear-gradient(135deg, var(--accent), var(--accent2)); border-color: transparent; color: #04201c; font-weight: 650;
+  .btn.primary { background: var(--accent); border-color: transparent; color: #04201c; font-weight: 650;
                  box-shadow: 0 8px 20px -10px var(--accent-glow); }
   .btn.primary:hover { filter: brightness(1.08); box-shadow: 0 8px 24px -6px var(--accent-glow); }
   .btn.icon { padding: 6px 10px; }
@@ -148,12 +163,37 @@
   input[type=range]:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(45, 212, 191, 0.25); }
   .field input[type=range] { width: 90px; }
 
-  .hp { display: grid; grid-template-columns: 200px minmax(0, 1fr) 66px; align-items: center; gap: 6px 16px; padding: 11px 0;
+  .hp { display: grid; grid-template-columns: 200px minmax(0, 1fr) 78px; align-items: center; gap: 6px 16px; padding: 11px 0;
         border-top: 1px solid rgba(255, 255, 255, 0.05); }
   .hp:first-child { border-top: 0; }
   .hp .name { font-family: var(--mono); font-size: 13px; letter-spacing: 0.01em; color: var(--text); display: flex; align-items: center; gap: 8px; }
   .hp .name i { color: var(--accent); font: 600 12px/18px var(--sans); font-style: normal; padding: 0 7px; border-radius: 6px; background: var(--accent-soft); }
-  .hp .val { font-family: var(--mono); font-size: 12.5px; text-align: right; color: var(--accent); background: var(--accent-soft); border-radius: 6px; padding: 1px 8px; }
+  .hp .dd { position: relative; justify-self: center; }
+  .hp .val { min-width: 54px; font-family: var(--mono); font-size: 12.5px; line-height: 18px; color: var(--accent); cursor: pointer;
+             text-align: center; border: 1px solid rgba(45, 212, 191, 0.28); border-radius: 6px;
+             padding: 1px 17px 1px 7px; background: var(--accent-soft) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5'%3E%3Cpath d='M0 0h8L4 5z' fill='%232dd4bf'/%3E%3C/svg%3E") no-repeat right 6px center; }
+  .hp .val:hover { border-color: rgba(45, 212, 191, 0.6); }
+  .ddlist { position: absolute; z-index: 40; right: 0; top: calc(100% + 4px); min-width: 100%; padding: 3px; display: flex; flex-direction: column; gap: 1px;
+             background: #141a27; border: 1px solid var(--border2); border-radius: 8px; box-shadow: 0 12px 28px -8px rgba(0, 0, 0, 0.85); }
+  .ddlist.up { top: auto; bottom: calc(100% + 4px); }
+  .ddlist[hidden] { display: none; }
+  .ddlist button { font: 12px/18px var(--mono); padding: 1px 10px; border: 0; border-radius: 5px; background: none; color: var(--text); cursor: pointer; text-align: center; white-space: nowrap; }
+  .ddlist button:hover, .ddlist button:focus-visible { background: rgba(255, 255, 255, 0.07); outline: none; }
+  .ddlist button.sel { color: var(--accent); background: var(--accent-soft); }
+  /* laptops: smaller dropdowns (their open list uses the same font size, so it shrinks too) */
+  @media (max-width: 1600px) {
+    #hpRows .hp { grid-template-columns: 200px minmax(0, 1fr) 66px; }
+    .hp .val { font-size: 11.5px; line-height: 16px; min-width: 46px; padding: 1px 15px 1px 6px; background-position: right 5px center; }
+    .ddlist button { font-size: 11.5px; line-height: 17px; }
+    #shape { font-size: 12px; padding: 3px 7px; }
+    #seed { font-size: 12px; padding: 3px 7px; width: 64px; }
+  }
+  @media (max-width: 1300px) {
+    #hpRows .hp { grid-template-columns: 180px minmax(0, 1fr) 60px; }
+    .hp .val { font-size: 11px; line-height: 15px; min-width: 42px; padding: 0 14px 0 5px; }
+    .ddlist button { font-size: 11px; line-height: 16px; padding: 1px 8px; }
+    #shape { font-size: 11.5px; }
+  }
   .hp .hint { grid-column: 1 / -1; color: var(--muted); font-size: 12px; line-height: 1.45; margin-top: 0; }
 
   .controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 10px; }
@@ -177,8 +217,8 @@
                  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.02), 0 10px 26px -16px rgba(0, 0, 0, 0.9); }
   .canvas-wrap canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
   .canvas-wrap.data { aspect-ratio: 4 / 3; cursor: crosshair; }
-  /* on short screens (e.g. 13" laptops) shrink the canvas, keeping 4:3, so the whole plot stays in view */
-  @media (min-width: 901px) { .canvas-wrap.data { width: min(100%, calc((100vh - 360px) * 4 / 3)); min-width: 320px; margin-inline: auto; } }
+  /* on short screens (e.g. 13" laptops) the canvas shrinks, keeping 4:3, so the whole plot stays in view (exact size set by fitDataCanvas) */
+  @media (min-width: 901px) { .canvas-wrap.data { width: min(100%, calc((100vh - 300px) * 4 / 3)); min-width: 360px; margin-inline: auto; } }
   /* collapsible card header (per-point table) */
   .collapse { background: none; border: 0; padding: 0; cursor: pointer; color: inherit; font: inherit; letter-spacing: inherit; text-transform: inherit; }
   .collapse:hover { color: var(--text); }
@@ -213,24 +253,37 @@
   .stage:nth-child(3), .explain[data-stage="3"] { --sc: var(--st3); --sci: var(--st3-ink); }
   .stage:nth-child(4), .explain[data-stage="4"] { --sc: var(--st4); --sci: var(--st4-ink); }
   .stage { position: relative; border: 1px solid color-mix(in srgb, var(--sc) 28%, transparent); background: color-mix(in srgb, var(--sc) 7%, var(--inset)); border-radius: 10px; padding: 8px 9px 7px;
-           color: var(--dim); font-size: 11.5px; line-height: 1.35; box-shadow: inset 0 2px 0 var(--sc);
+           color: var(--dim); font-size: 11.5px; line-height: 1.35;
            transition: border-color 0.25s, background 0.25s, box-shadow 0.25s; }
   .stage:not(:last-child)::after { content: ""; position: absolute; right: -9px; top: 50%; width: 6px; height: 6px;
                                    border-top: 1.5px solid var(--dim); border-right: 1.5px solid var(--dim); transform: translateY(-50%) rotate(45deg); }
   .stage b { display: block; color: var(--sci); opacity: 0.8; font-weight: 600; font-size: 12px; }
   .stage code { font-family: var(--mono); font-size: 10.5px; }
   .stage.next { border-style: dashed; border-color: var(--sc); background: color-mix(in srgb, var(--sc) 11%, var(--inset)); }
-  .stage.did { border-color: var(--sc); color: var(--text); box-shadow: inset 0 2px 0 var(--sc), 0 0 26px -8px var(--sc);
+  .stage.did { border-color: var(--sc); color: var(--text); box-shadow: 0 0 26px -8px var(--sc);
                background: color-mix(in srgb, var(--sc) 22%, var(--inset)); }
   .stage.did b { opacity: 1; }
+  /* stages are clickable: jump to that stage of the current tree */
+  .stage { cursor: pointer; }
+  .stage:hover { border-color: var(--sc); background: color-mix(in srgb, var(--sc) 16%, var(--inset)); }
+  .stage:focus-visible { outline: 2px solid var(--sc); outline-offset: 2px; }
   @media (max-width: 560px) { .stages { grid-template-columns: repeat(2, minmax(0, 1fr)); } .stage:nth-child(2)::after { display: none; } }
 
   .explain:not([data-stage]) { --sc: var(--accent); --sci: var(--accent); }
+  /* training finished (converged or n_estimators reached): the app's accent cyan, like the Random / Play buttons */
+  .explain[data-stage="done"] { --sc: var(--accent); --sci: #5eead4; }
   .explain { position: relative; overflow: hidden; background: color-mix(in srgb, var(--sc) 9%, #1a2030);
-             border: 1px solid color-mix(in srgb, var(--sc) 30%, transparent); border-radius: 12px; padding: 11px 14px 11px 17px;
+             border: 1px solid color-mix(in srgb, var(--sc) 30%, transparent); border-radius: 12px; padding: 11px 14px;
              transition: background 0.3s, border-color 0.3s; }
-  .explain::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--sc); }
-  .explain .title { font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--sci); margin-bottom: 4px; font-weight: 700; }
+  .explain .title { font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--sci); margin-bottom: 4px; font-weight: 700;
+                    display: flex; align-items: center; gap: 8px; }
+  .explain .title .meanings { margin-left: auto; text-transform: none; letter-spacing: 0; font-weight: 400; color: var(--dim); }
+  /* ‹ › in the title: step back / forward while reading */
+  .exnav { display: inline-flex; gap: 4px; }
+  .exnav button { width: 24px; height: 20px; display: grid; place-items: center; padding: 0; font: 700 14px/1 var(--sans); cursor: pointer;
+                  color: var(--sci); background: color-mix(in srgb, var(--sc) 14%, transparent); border: 1px solid color-mix(in srgb, var(--sc) 45%, transparent); border-radius: 6px; }
+  .exnav button:hover:not(:disabled) { background: color-mix(in srgb, var(--sc) 28%, transparent); }
+  .exnav button:disabled { opacity: 0.35; cursor: default; }
   .explain p { margin: 5px 0; }
   .explain .lead { font-weight: 650; font-size: 13.5px; }
   .explain .cap { color: var(--muted); font-size: 12px; margin-bottom: 2px; }
@@ -250,6 +303,12 @@
 
   .tree-wrap { overflow: auto; max-height: 340px; min-height: 90px; }
   .tree-wrap svg { display: block; margin: 0 auto; overflow: visible; }
+  .tree-wrap.pannable { cursor: grab; }
+  .tree-wrap.panning { cursor: grabbing; user-select: none; }
+  .zoom { display: inline-flex; align-items: center; gap: 4px; margin-left: 6px; text-transform: none; letter-spacing: 0; font-weight: 400; }
+  .zoom #zoomLbl { font-family: var(--mono); min-width: 40px; text-align: center; color: var(--text); }
+  .zoom .btn.small { min-width: 24px; }
+  .zoom .btn.small.on { color: var(--accent); border-color: rgba(45, 212, 191, 0.5); }
   .tree-nav { display: flex; align-items: center; gap: 6px; }
   .tn { cursor: pointer; }
   .tn rect { fill: #1b2232; stroke: var(--border2); stroke-width: 1; filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.35)); transition: stroke 0.15s; }
@@ -314,9 +373,9 @@
     </div>
     <div>
       <h1>XGBoost Visualizer <span class="pill">gradient-boosted trees · binary:logistic</span></h1>
-      <p>XGBoost builds many small decision trees, one after another. Each new tree learns to fix the mistakes of the trees before it, and the final prediction is the sum of all the trees, so the model gets a little better with every tree.</p>
+      <p>XGBoost builds <em>small decision trees one after another</em>. Each new tree <em>fixes the mistakes</em> of the trees before it, and their <em>sum is the final prediction</em>.</p>
     </div>
-    <div class="kbd-hints"><span><kbd>Space</kbd> play/pause</span><span><kbd>←</kbd> <kbd>→</kbd> step back / forward</span><span><kbd>R</kbd> reset</span></div>
+    <div class="kbd-hints"><span><kbd>Space</kbd> play<span class="long">/pause</span></span><span><kbd>←</kbd> <kbd>→</kbd> step<span class="long">&nbsp;back / forward</span></span><span><kbd>R</kbd> reset</span></div>
   </header>
 
   <main>
@@ -326,8 +385,14 @@
       <!-- 01 Data canvas -->
       <div class="panel" id="pData">
         <div class="panel-h"><span class="num">01</span><h2>Data Canvas</h2>
-          <span class="sub">Spray: hold &amp; drag · Erase: drag · Right-click / Shift+click: delete one point</span></div>
+          <div class="seg" id="toolSeg" title="Canvas tool" style="margin-left:auto">
+            <button data-t="spray" class="on" title="Hold and drag to spray random points inside the nozzle">⁘ Spray</button>
+            <button data-t="point" title="Click to add exactly one point">• Point</button>
+            <button data-t="erase" title="Drag to erase every point inside the nozzle">⌫ Erase</button>
+          </div></div>
+        <!-- dataset: every change redraws the data immediately (no Generate button needed) -->
         <div class="toolbar">
+          <div class="tgroup">
           <select id="shape" title="Dataset shape">
             <option value="moons">Two moons</option>
             <option value="blobs">Gaussian blobs</option>
@@ -337,26 +402,26 @@
             <option value="checker">Checkerboard</option>
             <option value="spiral">Spirals</option>
           </select>
+          <div class="field" title="Same seed = same data. Type a number or press Random.">seed <input type="number" id="seed" value="42" min="0" step="1" inputmode="numeric"></div>
+          <button class="btn primary" id="gen" title="New random data (random seed)">Random</button>
+          <button class="btn" id="clear">Clear all</button>
+          </div>
+          <div class="tgroup sliders">
           <div class="field">points <input type="range" id="nPts" min="10" max="300" step="5" value="120"><span class="v" id="nPtsV">120</span></div>
           <div class="field">noise <input type="range" id="noise" min="0" max="1" step="0.05" value="0.2"><span class="v" id="noiseV">0.20</span></div>
-          <div class="field">seed <input type="number" id="seed" value="42" min="0" step="1"><button class="btn icon" id="dice" title="Random seed">⟳</button></div>
-          <button class="btn primary" id="gen">Generate</button>
-          <button class="btn" id="clear">Clear all</button>
+          </div>
         </div>
         <div class="toolbar">
-          <div class="seg" id="toolSeg" title="Canvas tool">
-            <button data-t="spray" class="on" title="Hold and drag to spray random points inside the nozzle">⁘ Spray</button>
-            <button data-t="point" title="Click to add exactly one point">• Point</button>
-            <button data-t="erase" title="Drag to erase every point inside the nozzle">⌫ Erase</button>
-          </div>
           <div class="field" id="classField">class
             <div class="seg" id="classSeg">
               <button data-c="0" class="on"><span class="dot" style="background:var(--c0)"></span>0</button>
               <button data-c="1"><span class="dot" style="background:var(--c1)"></span>1</button>
             </div>
           </div>
+          <div class="tgroup sliders">
           <div class="field" id="nozzleField" title="Radius of the spray / eraser circle">nozzle <input type="range" id="nozzle" min="6" max="80" step="2" value="28"><span class="v" id="nozzleV">28px</span></div>
           <div class="field" id="densityField" title="Points added per spray burst (about 16 bursts per second)">density <input type="range" id="density" min="1" max="10" step="1" value="3"><span class="v" id="densityV">3</span></div>
+          </div>
         </div>
         <div class="canvas-wrap data" id="dataWrap">
           <canvas id="dataCv"></canvas>
@@ -373,6 +438,7 @@
           <label class="chk"><input type="checkbox" id="showParts" checked> show tree splits</label>
           <label class="chk"><input type="checkbox" id="sizeByG"> size points by |g| (how wrong each point is)</label>
         </div>
+        <div class="hint-line" style="margin-top:8px">Spray: hold &amp; drag · Point: click · Erase: drag · Right-click or Shift+click deletes one point</div>
       </div>
 
       <!-- 02 Hyperparameters & controls -->
@@ -382,7 +448,8 @@
           <button class="btn" id="backBtn" title="Step back (←)">◂ Back</button>
           <button class="btn" id="stepBtn" title="Step (→)">Step ▸</button>
           <button class="btn primary" id="playBtn" title="Play / Pause (Space)">▶ Play until convergence</button>
-          <button class="btn" id="resetBtn" title="Reset model (R)">↺ Reset model</button>
+          <button class="btn" id="skipBtn" title="Train instantly until converged / done">⏭ Skip to end</button>
+          <button class="btn" id="resetBtn" title="Reset the model (R)">↺ Reset</button>
         </div>
         <div class="controls">
           <span class="field">one step =</span>
@@ -390,7 +457,7 @@
             <button data-g="stage" class="on">one stage</button>
             <button data-g="tree">one whole tree</button>
           </div>
-          <div class="field">speed <input type="range" id="speed" min="1" max="10" step="1" value="5"><span class="v" id="speedV">8/s</span></div>
+          <div class="field">speed <input type="range" id="speed" min="1" max="6" step="1" value="4"><span class="v" id="speedV">3/s</span></div>
         </div>
         <div class="status" id="status"></div>
         <div class="notice" id="notice"></div>
@@ -406,16 +473,17 @@
       <!-- 03 Model state -->
       <div class="panel" id="pModel">
         <div class="panel-h"><span class="num">03</span><h2>Model State</h2>
-          <button class="btn small" id="toLoss" title="Jump to the loss curve">↓ Loss curve</button><span class="sub" id="ensembleLbl"></span></div>
+          <span class="mode" id="modeLbl" title="What one Step does (change it in panel 02)"></span><span class="sub" id="ensembleLbl"></span></div>
         <div class="stack">
           <div class="stages" id="stages"></div>
           <div class="explain" id="explain"></div>
           <div class="chips" id="chips"></div>
           <div class="card">
-            <div class="card-h">Tree
+            <div class="card-h" style="flex-wrap:wrap">Tree
+              <span class="zoom" role="group" aria-label="Tree zoom"><button class="btn small" id="zoomOut" title="Zoom out (or Ctrl + scroll)">−</button><span id="zoomLbl">100%</span><button class="btn small" id="zoomIn" title="Zoom in (or Ctrl + scroll)">+</button><button class="btn small" id="zoomFit" title="Fit the whole tree in the box">Fit</button></span>
               <span class="r tree-nav"><button class="btn small" id="treePrev" title="Previous tree">◀</button><span id="treeLbl"></span><button class="btn small" id="treeNext" title="Next tree">▶</button><button class="btn small" id="treeLive" title="Back to the tree being built">live</button></span></div>
             <div class="tree-wrap scroll" id="treeWrap"></div>
-            <div class="hint-line" style="margin-top:6px">Hover a node to highlight its region and points on the Data Canvas. Each node is just a rectangle of the plane.</div>
+            <div class="hint-line" style="margin-top:6px">Hover a node to highlight its region and points on the Data Canvas. Each node is just a rectangle of the plane. Big tree? Zoom with − / + / Fit or Ctrl + scroll, and drag to move around.</div>
           </div>
           <div class="card" id="gainCard">
             <div class="card-h">Gain scan: every candidate threshold <span class="r" id="gainLbl"></span></div>
@@ -877,7 +945,7 @@ function runSelfTest() {
   let hoverNode = -1;   // tree-diagram node under the mouse (highlighted on the canvas)
   let lossHover = -1, lastEventKey = 0, prevTable = new Map(), prevFlashNode = null;
   let treeSeen = { key: null, ids: new Set() }; // tree-diagram nodes already shown (new ones animate in)
-  const SPEEDS = [1, 2, 3, 5, 8, 12, 20, 35, 60, 120];
+  const SPEEDS = [0.5, 1, 2, 3, 4, 5]; // steps per second (capped at 5 so every step can be followed)
   const C0 = [91, 141, 239], C1 = [245, 161, 66];
   const FEAT = ["x₁", "x₂"];
 
@@ -895,32 +963,75 @@ function runSelfTest() {
 
   /* ---------- Hyperparameter rows ---------- */
   const HP = [
-    { key: "nEst", name: "n_estimators", sym: "T", min: 1, max: 200, step: 1, f: v => v, hint: "Maximum number of trees (boosting rounds)." },
-    { key: "eta", name: "learning_rate", sym: "η", min: 0.01, max: 1, step: 0.01, f: v => v.toFixed(2), hint: "Shrinkage: each tree only adds η·f(x) to the score." },
-    { key: "maxDepth", name: "max_depth", sym: "", min: 1, max: 6, step: 1, f: v => v, hint: "How many levels of yes/no questions a tree may ask." },
-    { key: "lambda", name: "reg_lambda", sym: "λ", min: 0, max: 10, step: 0.1, f: v => v.toFixed(1), hint: "L2 penalty: shrinks leaf weights w = −G/(H+λ) and the gain." },
-    { key: "gamma", name: "gamma", sym: "γ", min: 0, max: 5, step: 0.05, f: v => v.toFixed(2), hint: "Pruning threshold: after growing, splits with Gain < γ are removed (bottom-up)." },
-    { key: "mcw", name: "min_child_weight", sym: "", min: 0, max: 10, step: 0.1, f: v => v.toFixed(1), hint: "Each child must have hessian sum H ≥ this value." },
-    { key: "tol", name: "tolerance", sym: "ε", min: -6, max: -1, step: 0.5, log: true, f: v => expFmt(v), hint: "Convergence: stop when the loss improves by less than ε." },
+    { key: "nEst", name: "n_estimators", sym: "T", min: 1, max: 200, step: 1, presets: [10, 20, 50, 100, 200], f: v => v, hint: "Maximum number of trees (boosting rounds)." },
+    { key: "eta", name: "learning_rate", sym: "η", min: 0.01, max: 1, step: 0.01, presets: [0.01, 0.05, 0.1, 0.3, 0.5, 1], f: v => v.toFixed(2), hint: "Shrinkage: each tree only adds η·f(x) to the score." },
+    { key: "maxDepth", name: "max_depth", sym: "", min: 1, max: 6, step: 1, presets: [1, 2, 3, 4, 5, 6], f: v => v, hint: "How many levels of yes/no questions a tree may ask." },
+    { key: "lambda", name: "reg_lambda", sym: "λ", min: 0, max: 10, step: 0.1, presets: [0, 0.5, 1, 2, 5, 10], f: v => v.toFixed(1), hint: "L2 penalty: shrinks leaf weights w = −G/(H+λ) and the gain." },
+    { key: "gamma", name: "gamma", sym: "γ", min: 0, max: 5, step: 0.05, presets: [0, 0.1, 0.5, 1, 2, 5], f: v => v.toFixed(2), hint: "Pruning threshold: after growing, splits with Gain < γ are removed (bottom-up)." },
+    { key: "mcw", name: "min_child_weight", sym: "", min: 0, max: 10, step: 0.1, presets: [0, 0.5, 1, 2, 5, 10], f: v => v.toFixed(1), hint: "Each child must have hessian sum H ≥ this value." },
+    { key: "tol", name: "tolerance", sym: "ε", min: -6, max: -1, step: 0.5, log: true, presets: [1e-6, 1e-5, 1e-4, 1e-3, 1e-2, 1e-1], f: v => expFmt(v), hint: "Convergence: stop when the loss improves by less than ε." },
   ];
+  // slider position ↔ parameter value (tolerance uses a log scale)
+  const hpRaw = (h, v) => +(h.log ? Math.log10(v) : v).toFixed(6);
+  const hpVal = (h, raw) => (h.log ? Math.pow(10, raw) : raw);
+  // the value box opens a small list of common values (drawn by the page, not the browser, so it is the same compact size
+  // on every computer); a value set with the slider is added to the list
+  function hpOptions(h) {
+    const cur = hpRaw(h, P[h.key]), raws = h.presets.map(v => hpRaw(h, v));
+    if (!raws.includes(cur)) raws.push(cur);
+    return raws.sort((a, b) => a - b).map(r =>
+      `<button type="button" role="option" data-raw="${r}" aria-selected="${r === cur}"${r === cur ? ' class="sel"' : ""}>${h.f(hpVal(h, r))}</button>`).join("");
+  }
+  let openDD = null; // the value list that is open, if any
+  function closeDD() {
+    if (!openDD) return;
+    openDD.list.hidden = true; openDD.btn.setAttribute("aria-expanded", "false"); openDD = null;
+  }
   function buildHP() {
     const box = $("hpRows");
-    box.innerHTML = HP.map(h => {
-      const v = h.log ? Math.log10(P[h.key]) : P[h.key];
-      return `<div class="hp"><span class="name">${h.name}${h.sym ? `<i>${h.sym}</i>` : ""}</span>
-        <input type="range" id="hp_${h.key}" min="${h.min}" max="${h.max}" step="${h.step}" value="${v}">
-        <span class="val" id="hpv_${h.key}">${h.f(P[h.key])}</span><span class="hint">${h.hint}</span></div>`;
-    }).join("");
+    box.innerHTML = HP.map(h => `<div class="hp"><span class="name">${h.name}${h.sym ? `<i>${h.sym}</i>` : ""}</span>
+        <input type="range" id="hp_${h.key}" min="${h.min}" max="${h.max}" step="${h.step}" value="${hpRaw(h, P[h.key])}" aria-label="${h.name}">
+        <div class="dd"><button type="button" class="val" id="hpv_${h.key}" title="Pick a common value (or drag the slider)" aria-label="${h.name} value" aria-haspopup="listbox" aria-expanded="false">${h.f(P[h.key])}</button>
+          <div class="ddlist" role="listbox" hidden></div></div><span class="hint">${h.hint}</span></div>`).join("");
     for (const h of HP) {
-      $("hp_" + h.key).addEventListener("input", e => {
-        const raw = parseFloat(e.target.value);
-        P[h.key] = h.log ? Math.pow(10, raw) : raw;
-        $("hpv_" + h.key).textContent = h.f(P[h.key]);
+      const slider = $("hp_" + h.key), btn = $("hpv_" + h.key), list = btn.nextElementSibling;
+      const apply = raw => {
+        P[h.key] = hpVal(h, raw);
+        btn.textContent = h.f(P[h.key]);
         // n_estimators / ε may un-stop (or stop) a finished model
         if (S.phase === "done" && !stopCheck(S, P)) S = { ...S, phase: "grad", stopReason: null };
         renderStatus(); renderStages();
+      };
+      slider.addEventListener("input", () => apply(parseFloat(slider.value)));
+      btn.addEventListener("click", e => {
+        e.stopPropagation();
+        if (openDD && openDD.btn === btn) { closeDD(); return; }
+        closeDD();
+        list.innerHTML = hpOptions(h);
+        list.hidden = false; btn.setAttribute("aria-expanded", "true"); openDD = { btn, list };
+        // open upwards when there is no room below inside the scrolling column
+        list.classList.remove("up");
+        const col = btn.closest(".col"), lr = list.getBoundingClientRect();
+        if (col && lr.bottom > col.getBoundingClientRect().bottom) list.classList.add("up");
+        (list.querySelector(".sel") || list.firstChild).focus();
+      });
+      list.addEventListener("click", e => {
+        const o = e.target.closest("button[data-raw]");
+        if (!o) return;
+        e.stopPropagation();
+        slider.value = o.dataset.raw; paintRange(slider);
+        apply(parseFloat(o.dataset.raw));
+        closeDD(); btn.blur(); // so ← → step the model again
+      });
+      // keyboard inside the list: ↑ ↓ move, Enter picks, Esc closes (and the keys never step the model)
+      list.addEventListener("keydown", e => {
+        const items = [...list.children], i = items.indexOf(document.activeElement);
+        if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); items[Math.min(items.length - 1, Math.max(0, i + (e.key === "ArrowDown" ? 1 : -1)))].focus(); }
+        else if (e.key === "Escape") { closeDD(); btn.focus(); }
+        e.stopPropagation();
       });
     }
+    document.addEventListener("click", closeDD);
   }
 
   /* ---------- Canvas helpers ---------- */
@@ -1142,7 +1253,7 @@ function runSelfTest() {
     if (!data.length) {
       ctx.fillStyle = "#8a93a8"; ctx.font = "13px " + SANS;
       ctx.textAlign = "center"; ctx.textBaseline = "middle";
-      ctx.fillText("No data — spray or click to add points, or press Generate", DR.x + DR.w / 2, DR.y + DR.h / 2);
+      ctx.fillText("No data — spray or click to add points, or pick a dataset", DR.x + DR.w / 2, DR.y + DR.h / 2);
     } else drawStatusPill(ctx, now);
   }
 
@@ -1280,7 +1391,7 @@ function runSelfTest() {
     renderAll();
   }
   function dataWarning() {
-    if (!data.length) return "No points — generate a dataset, or spray / click on the canvas to add some.";
+    if (!data.length) return "No points — pick a dataset, or spray / click on the canvas to add some.";
     const ones = data.filter(d => d.y === 1).length;
     if (data.every(d => d.x1 === data[0].x1 && d.x2 === data[0].x2)) return "All points are identical — no split is possible, so every tree is a single leaf.";
     if (ones === 0 || ones === data.length) return `Only one class present — the model can only learn "always class ${data[0].y}" (loss still shrinks toward 0).`;
@@ -1338,14 +1449,72 @@ function runSelfTest() {
     if (S.phase === "done") pause();
     renderAll();
   }
+  // run every remaining step at once (each one is still recorded, so ← walks back through them)
+  function skipToEnd() {
+    pause();
+    if (!data.length) { notice = "No data to train on — add points first."; renderStatus(); return; }
+    if (S.phase === "done") { notice = "Already finished — press R to reset, or loosen ε / raise n_estimators."; renderStatus(); return; }
+    const from = S.round;
+    for (let guard = 0; guard < 100000 && S.phase !== "done" && S.event.type !== "empty"; guard++) {
+      const before = S.stepCount;
+      doStep();
+      if (S.stepCount === before) break;
+    }
+    notice = `Skipped ahead: trees ${from + 1}–${S.round} were trained instantly.`;
+    renderAll();
+  }
   function resetModel() {
     pause(); S = initState(data); undo.length = 0; prevTable.clear(); viewTree = -1; hoverNode = -1;
     notice = "Model reset: F = 0 for every point."; renderAll();
   }
 
+  // jump to a stage of the current tree: forward = run steps until that stage has happened,
+  // backward = return to the last time it happened in this tree (from the step history)
+  const STAGE_OF = { grad: "grad", split: "split", leaves: "leaves", update: "update", round: "update" };
+  const ORDER = ["grad", "split", "leaves", "update"];
+  function jumpToStage(k) {
+    pause();
+    if (!data.length) { notice = "No data to train on — add points first."; renderStatus(); return; }
+    const cur = STAGE_OF[S.event.type], name = STAGES.find(x => x[0] === k)[1];
+    const isNext = k === S.phase; // the box marked "next" always moves forward (e.g. the next split, or the next tree)
+    if (cur === k && !isNext) { notice = `Already showing ${name}.`; renderStatus(); return; }
+    const treeNo = S.event.treeNo;
+    const behind = cur && !isNext && ORDER.indexOf(k) < ORDER.indexOf(cur);
+    if (behind) {
+      for (let i = undo.length - 1; i >= 0; i--) {
+        const e = undo[i].event;
+        if (e.treeNo !== treeNo) break;
+        if (STAGE_OF[e.type] === k && e.type !== "round") { S = undo[i]; undo.length = i; viewTree = -1; hoverNode = -1; notice = `Back to ${name} of tree #${treeNo}.`; renderAll(); return; }
+      }
+      notice = `${name} is not in the step history of tree #${treeNo} (it was built in one go). Press Step to continue.`; renderStatus(); return;
+    }
+    if (S.phase === "done") { notice = "Training is finished — press R to reset, or use ‹ / ← to go back through the steps."; renderStatus(); return; }
+    // forward: one stage at a time (also in whole-tree mode), every step kept for ←
+    notice = "";
+    for (let guard = 0; guard < 2000 && S.phase !== "done"; guard++) {
+      const prev = S; S = step(S, data, P);
+      if (S.stepCount === prev.stepCount) break;
+      undo.push(prev); if (undo.length > UNDO_MAX) undo.shift();
+      if (STAGE_OF[S.event.type] === k) break;
+    }
+    viewTree = -1; hoverNode = -1; renderAll();
+  }
+  $("stages").addEventListener("click", e => { const st = e.target.closest(".stage[data-k]"); if (st) jumpToStage(st.dataset.k); });
+  $("stages").addEventListener("keydown", e => {
+    const st = e.target.closest(".stage[data-k]");
+    if (st && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); e.stopPropagation(); jumpToStage(st.dataset.k); }
+  });
+  // ‹ › inside the explanation title
+  $("explain").addEventListener("click", e => {
+    const b = e.target.closest(".exnav button");
+    if (!b || b.disabled) return;
+    b.blur();
+    if (b.dataset.x === "back") stepBack(); else { pause(); manualStep(); }
+  });
   $("stepBtn").addEventListener("click", manualStep);
   $("backBtn").addEventListener("click", stepBack);
   $("playBtn").addEventListener("click", togglePlay);
+  $("skipBtn").addEventListener("click", skipToEnd);
   $("resetBtn").addEventListener("click", resetModel);
 
   /* ---------- Glossary: plain-English meaning of each technical word (hover a dotted word) ---------- */
@@ -1385,19 +1554,21 @@ function runSelfTest() {
   });
   document.addEventListener("scroll", () => { termTip.style.display = "none"; }, true);
   $("speed").addEventListener("input", e => { $("speedV").textContent = SPEEDS[+e.target.value - 1] + "/s"; });
-  $("nPts").addEventListener("input", e => { $("nPtsV").textContent = e.target.value; });
-  $("noise").addEventListener("input", e => { $("noiseV").textContent = (+e.target.value).toFixed(2); });
+  // dataset controls redraw the data immediately (no Generate button needed)
+  $("shape").addEventListener("change", e => { e.target.blur(); generate(); }); // blur: ← → go back to stepping the model
+  $("nPts").addEventListener("input", e => { $("nPtsV").textContent = e.target.value; generate(); });
+  $("noise").addEventListener("input", e => { $("noiseV").textContent = (+e.target.value).toFixed(2); generate(); });
+  $("seed").addEventListener("input", e => { if (e.target.value !== "") generate(); });
+  $("seed").addEventListener("change", generate); // leaving an empty / invalid box falls back to seed 42
   $("nozzle").addEventListener("input", e => { $("nozzleV").textContent = e.target.value + "px"; });
   $("density").addEventListener("input", e => { $("densityV").textContent = e.target.value; });
-  $("dice").addEventListener("click", () => { $("seed").value = Math.floor(Math.random() * 100000); generate(); });
-  $("gen").addEventListener("click", generate);
+  $("gen").addEventListener("click", () => { $("seed").value = Math.floor(Math.random() * 100000); generate(); });
   $("clear").addEventListener("click", () => { data = []; dataChanged("Cleared all points."); });
   $("sizeByG").addEventListener("change", renderData);
   $("showParts").addEventListener("change", renderData);
   $("moreBtn").addEventListener("click", () => { showAll = !showAll; renderTable(false); });
   let tableOpen = false;
   $("tblToggle").addEventListener("click", () => { tableOpen = !tableOpen; renderTable(false); });
-  $("toLoss").addEventListener("click", () => $("pLoss").scrollIntoView({ behavior: REDUCED ? "auto" : "smooth", block: "start" }));
   for (const b of $("classSeg").querySelectorAll("button")) b.addEventListener("click", () => {
     addClass = +b.dataset.c;
     $("classSeg").querySelectorAll("button").forEach(x => x.classList.toggle("on", x === b));
@@ -1413,7 +1584,7 @@ function runSelfTest() {
   for (const b of $("granSeg").querySelectorAll("button")) b.addEventListener("click", () => {
     granularity = b.dataset.g;
     $("granSeg").querySelectorAll("button").forEach(x => x.classList.toggle("on", x === b));
-    renderGain();
+    renderMode(); renderExplain(); renderGain();
   });
 
   // tree browser: ◀ / ▶ walk through finished trees, "live" returns to the tree being built
@@ -1486,12 +1657,13 @@ function runSelfTest() {
   }
 
   /* ---------- Model state ---------- */
+  function renderMode() { $("modeLbl").innerHTML = `step = <b>${granularity === "tree" ? "one whole tree" : "one stage"}</b>`; }
   const STAGES = [["grad", "1 · Gradients", "g = p−y, h = p(1−p)"], ["split", "2 · Find splits", "maximize Gain"],
                   ["leaves", "3 · Prune + leaf weights", "Gain<γ ✂ · w = −G/(H+λ)"], ["update", "4 · Update F", "F ← F + η·w"]];
   function renderStages() {
     const did = { grad: "grad", split: "split", leaves: "leaves", update: "update", round: "update" }[S.event.type];
     $("stages").innerHTML = STAGES.map(([k, t, f]) =>
-      `<div class="stage ${k === did ? "did" : ""} ${k === S.phase ? "next" : ""}"><b>${t}</b><code>${f}</code></div>`).join("");
+      `<div class="stage ${k === did ? "did" : ""} ${k === S.phase ? "next" : ""}" data-k="${k}" role="button" tabindex="0" title="Jump to this stage of the current tree"><b>${t}</b><code>${f}</code></div>`).join("");
   }
 
   // Gain = similarity(left) + similarity(right) − similarity(parent), similarity = G²/(H+λ)  (xgboost library form)
@@ -1504,12 +1676,14 @@ function runSelfTest() {
       &nbsp;<span class="c">${bs.gain >= gam ? "≥" : "<"} γ = ${fmt(gam, 2)}</span></div>
       <p class="cap">Note: the XGBoost paper writes Gain = ½[ … ] − γ. The xgboost library (and this app) leaves out the ½ and compares Gain with γ, so the numbers here match the real library. The best split is the same either way.</p>`;
   }
+  // the tag of the last tree says that training finished
+  const stopTag = (ev, normal) => (ev.stop === "tol" ? "Converged ✓" : ev.stop === "max" ? "Done ✓" : normal);
   function updateFormula(ev) {
     return `<div class="formula">F ← F + η·w = ${par(ev.Fold)} + ${fmt(ev.eta, 2)}·${par(ev.w)} = ${res(fmt(ev.Fnew))}<br>
       p = σ(F): ${fmt(ev.pOld)} → ${res(fmt(ev.pNew))} &nbsp;<span class="c">(true label y = ${ev.y}; p ${(ev.y ? ev.pNew > ev.pOld : ev.pNew < ev.pOld) ? "moved toward" : "moved away from"} y)</span></div>
       <div class="formula">L: ${fmt(ev.lossBefore, 5)} → ${res(fmt(ev.lossAfter, 5))} &nbsp; |ΔL| = ${Math.abs(ev.lossBefore - ev.lossAfter).toExponential(2).replace("e-", "e−")} &nbsp;<span class="c">vs ε = ${expFmt(ev.tol)}</span></div>
-      <p>${ev.stop === "tol" ? "<b>Converged ✓</b> — the loss improved by less than ε, so another tree would barely help."
-        : ev.stop === "max" ? `<b>Done ✓</b> — reached n_estimators = ${ev.nEst} trees.` : "Next: recompute gradients with the new scores and grow the next tree."}</p>`;
+      <p>${ev.stop === "tol" ? `<b style="color:var(--sci)">Converged ✓</b> — the loss improved by less than ε, so another tree would barely help.`
+        : ev.stop === "max" ? `<b style="color:var(--sci)">Done ✓</b> — reached n_estimators = ${ev.nEst} trees.` : "Next: recompute gradients with the new scores and grow the next tree."}</p>`;
   }
   // what pruning did in Stage 3 (bottom-up: remove a split if both children are leaves and Gain < γ)
   function pruneHTML(ev) {
@@ -1537,7 +1711,7 @@ function runSelfTest() {
     const pt = i => data[i] ? `point #${i} (x₁ = ${fmt(data[i].x1, 2)}, x₂ = ${fmt(data[i].x2, 2)}, y = ${data[i].y} ${cls(data[i].y)})` : "";
     switch (ev.type) {
       case "empty":
-        return `<p class="lead">No data yet</p><p>Pick a dataset and press <b>Generate</b>, or use the <b>Spray</b> / <b>Point</b> tool on the canvas to add points of the selected class.</p>`;
+        return `<p class="lead">No data yet</p><p>Pick a dataset in the Data Canvas, or use the <b>Spray</b> / <b>Point</b> tool on the canvas to add points of the selected class.</p>`;
       case "init":
         return `<p class="lead">Model initialized: F<sub>0</sub> = 0 for every point</p>
           <p>Before any tree exists, every point gets the same raw ${T("score", "score")} (${T("logodds", "log-odds")}) F = 0, i.e. probability p = ${T("sigmoid", "σ")}(0) = 0.5 (XGBoost's ${T("basescore")}).</p>` +
@@ -1581,7 +1755,7 @@ function runSelfTest() {
           leavesList(ev, 8) +
           `<div class="formula">${T("structurescore", "Tree score")}: Obj = −½ Σ<sub>j</sub> ${fr("G<sub>j</sub>²", "H<sub>j</sub>+λ")} + γ·T = ${res(fmt(ev.obj, 4))} <span class="c">(lower = better tree; T = ${ev.leaves.length})</span></div>`;
       case "update":
-        return `<p class="lead"><span class="tag">Stage 4</span>Tree #${ev.treeNo} added to the ${T("ensemble", "ensemble")}</p>
+        return `<p class="lead"><span class="tag">${stopTag(ev, "Stage 4")}</span>Tree #${ev.treeNo} added to the ${T("ensemble", "ensemble")}</p>
           <p>Every point's score moves by η × (${T("leafweight", "weight")} of the leaf it falls in). The ${T("shrinkage", "shrinkage η")} keeps a single tree from over-correcting.</p>` +
           plain("every point's score is nudged by its leaf's number. Wrongly classified points move toward their true class, so the loss goes down.") + `
           <p class="cap">Worked example: ${pt(ev.i)}</p>` + updateFormula(ev);
@@ -1590,7 +1764,7 @@ function runSelfTest() {
         const list = sp.length ? `<ul>${sp.slice(0, 6).map(x => `<li>node #${x.nodeId}: ${FEAT[x.best.f]} &lt; ${fmt(x.best.thr)} &nbsp;(Gain = ${fmt(x.best.gain, 4)})</li>`).join("")}${sp.length > 6 ? `<li>… +${sp.length - 6} more</li>` : ""}</ul>`
           : `<p>No split had positive gain, so the tree is a single leaf.</p>`;
         const nPruned = ev.leavesEv && ev.leavesEv.pruned ? ev.leavesEv.pruned.length : 0;
-        return `<p class="lead"><span class="tag">Round</span>Built tree #${ev.treeNo} in one step (${sp.length} splits grown${nPruned ? `, ${nPruned} pruned` : ""}, ${ev.nLeaves} leaves)</p>
+        return `<p class="lead"><span class="tag">${stopTag(ev, "Round")}</span>Built tree #${ev.treeNo} in one step (${sp.length} splits grown${nPruned ? `, ${nPruned} pruned` : ""}, ${ev.nLeaves} leaves)</p>
           <p>Gradients g = p − y and h = p(1−p) were computed, the best splits were chosen by Gain, splits with Gain &lt; γ were pruned, leaf weights set to w = −G/(H+λ), then scores updated.</p>` +
           list + (nPruned ? pruneHTML(ev.leavesEv) : "") + (ev.leavesEv ? leavesList(ev.leavesEv, 4) : "") + `<p class="cap">Worked example: ${pt(ev.i)}</p>` + updateFormula(ev);
       }
@@ -1604,9 +1778,10 @@ function runSelfTest() {
 
   function renderExplain() {
     const box = $("explain");
-    const stg = { grad: 1, split: 2, leaves: 3, update: 4, round: 4 }[S.event.type];
+    const finished = S.stopReason && ["update", "round", "done"].includes(S.event.type);
+    const stg = finished ? "done" : { grad: 1, split: 2, leaves: 3, update: 4, round: 4 }[S.event.type];
     if (stg) box.dataset.stage = stg; else delete box.dataset.stage;
-    box.innerHTML = `<div class="title">What just happened? <span style="float:right;text-transform:none;letter-spacing:0;font-weight:400;color:var(--dim)">hover <span class="term" style="cursor:default">dotted words</span> for meanings</span></div>` + explainHTML(S.event);
+    box.innerHTML = `<div class="title"><span class="exnav"><button type="button" data-x="back" title="Step back (←)" aria-label="Step back"${undo.length ? "" : " disabled"}>‹</button><button type="button" data-x="fwd" title="Step forward (→)" aria-label="Step forward"${S.phase === "done" || !data.length ? " disabled" : ""}>›</button></span>What just happened? <span class="meanings">hover <span class="term" style="cursor:default">dotted words</span> for meanings</span></div>` + explainHTML(S.event);
     if (S.stepCount !== lastEventKey) {
       lastEventKey = S.stepCount;
       box.classList.remove("flash"); void box.offsetWidth; box.classList.add("flash");
@@ -1645,6 +1820,7 @@ function runSelfTest() {
     // nodes not drawn before for this tree get a grow-in animation (the root's idx array identifies the tree)
     if (treeSeen.key !== nodes[0].idx) treeSeen = { key: nodes[0].idx, ids: new Set() };
     const isNew = id => !treeSeen.ids.has(id);
+    // compact layout: one column per real leaf, each parent centred over its children
     let leafX = 0, maxD = 0;
     (function lay(id) {
       const nd = nodes[id]; maxD = Math.max(maxD, nd.depth);
@@ -1693,11 +1869,67 @@ function runSelfTest() {
     }
     prevFlashNode = S.stepCount;
     for (const id in pos) treeSeen.ids.add(+id);
-    wrap.innerHTML = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">${svg}</svg>`;
+    treeSize = { W, H };
+    const z = curZoom = treeZoom === "fit" ? fitZoom() : treeZoom;
+    $("zoomFit").classList.toggle("on", treeZoom === "fit");
+    wrap.innerHTML = `<svg width="${Math.round(W * z)}" height="${Math.round(H * z)}" viewBox="0 0 ${W} ${H}">${svg}</svg>`;
+    $("zoomLbl").textContent = Math.round(z * 100) + "%";
+    $("zoomIn").disabled = z >= ZOOM_MAX - 1e-9; $("zoomOut").disabled = z <= ZOOM_MIN + 1e-9;
+    wrap.classList.toggle("pannable", wrap.scrollWidth > wrap.clientWidth + 1 || wrap.scrollHeight > wrap.clientHeight + 1);
+    // after a new step, scroll (only if needed) so the node that was just processed is in view
+    if (curId >= 0 && followedStep !== S.stepCount) {
+      followedStep = S.stepCount;
+      const r = wrap.querySelector(`g[data-id="${curId}"] rect`).getBoundingClientRect(), wr = wrap.getBoundingClientRect(), m = 12;
+      if (r.left < wr.left + m) wrap.scrollLeft -= wr.left + m - r.left; else if (r.right > wr.right - m) wrap.scrollLeft += r.right - (wr.right - m);
+      if (r.top < wr.top + m) wrap.scrollTop -= wr.top + m - r.top; else if (r.bottom > wr.bottom - m) wrap.scrollTop += r.bottom - (wr.bottom - m);
+    }
     const state = !tv.live ? "past tree" : S.phase === "split" ? "building" : S.phase === "leaves" ? "structure done"
       : S.phase === "update" ? "weights set" : "added to ensemble";
     $("treeLbl").textContent = `tree #${tv.treeNo} of ${Math.max(nav.total, tv.treeNo)} · ${state}`;
   }
+
+  /* ---------- Tree zoom: − / + / Fit buttons, Ctrl + scroll, drag to pan ---------- */
+  const ZOOM_MIN = 0.05, ZOOM_MAX = 2.5;
+  let treeZoom = 1, curZoom = 1, treeSize = { W: 1, H: 1 }, followedStep = -1;
+  // largest zoom (max 100%) at which the whole tree fits inside the box
+  function fitZoom() {
+    const wrap = $("treeWrap"), maxH = parseFloat(getComputedStyle(wrap).maxHeight) || 340;
+    return Math.max(ZOOM_MIN, Math.min(1, (wrap.clientWidth - 12) / treeSize.W, (maxH - 12) / treeSize.H));
+  }
+  // zoom keeping the tree point under (clientX, clientY) fixed; default anchor = centre of the box
+  function setZoom(z, clientX, clientY) {
+    const wrap = $("treeWrap"), svg = wrap.querySelector("svg");
+    if (!svg) return;
+    const wr = wrap.getBoundingClientRect();
+    if (clientX == null) { clientX = wr.left + wrap.clientWidth / 2; clientY = wr.top + wrap.clientHeight / 2; }
+    const a = svg.getBoundingClientRect(), fx = (clientX - a.left) / a.width, fy = (clientY - a.top) / a.height;
+    treeZoom = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, z));
+    renderTree();
+    const b = wrap.querySelector("svg").getBoundingClientRect();
+    wrap.scrollLeft += b.left + fx * b.width - clientX;
+    wrap.scrollTop += b.top + fy * b.height - clientY;
+  }
+  $("zoomIn").addEventListener("click", () => setZoom(curZoom * 1.25));
+  $("zoomOut").addEventListener("click", () => setZoom(curZoom / 1.25));
+  $("zoomFit").addEventListener("click", () => { treeZoom = "fit"; renderTree(); });
+  $("treeWrap").addEventListener("wheel", e => {
+    if (!e.ctrlKey && !e.metaKey) return; // plain scrolling still scrolls
+    e.preventDefault();
+    setZoom(curZoom * (e.deltaY < 0 ? 1.15 : 1 / 1.15), e.clientX, e.clientY);
+  }, { passive: false });
+  let pan = null;
+  $("treeWrap").addEventListener("pointerdown", e => {
+    const wrap = $("treeWrap");
+    if (e.button !== 0 || !wrap.classList.contains("pannable")) return;
+    pan = { x: e.clientX, y: e.clientY, sl: wrap.scrollLeft, st: wrap.scrollTop };
+    wrap.classList.add("panning");
+  });
+  window.addEventListener("pointermove", e => {
+    if (!pan) return;
+    const wrap = $("treeWrap");
+    wrap.scrollLeft = pan.sl - (e.clientX - pan.x); wrap.scrollTop = pan.st - (e.clientY - pan.y);
+  });
+  window.addEventListener("pointerup", () => { if (pan) { pan = null; $("treeWrap").classList.remove("panning"); } });
 
   /* ---------- Gain scan chart ---------- */
   function renderGain() {
@@ -1898,8 +2130,18 @@ function runSelfTest() {
   lossCv.addEventListener("mouseleave", () => { lossHover = -1; renderLoss(); });
 
   /* ---------- Render all ---------- */
-  function renderModel() { renderStages(); renderExplain(); renderChips(); renderTree(); renderGain(); renderTable(); }
+  function renderModel() { renderMode(); renderStages(); renderExplain(); renderChips(); renderTree(); renderGain(); renderTable(); }
   function renderAll() { noteStepForAnimation(); renderData(); renderStatus(); renderModel(); renderLoss(); }
+
+  // two-column layout: make the 4:3 canvas exactly as big as the height left under the toolbars allows
+  function fitDataCanvas() {
+    const wrap = $("dataWrap"), col = $("colLeft");
+    if (innerWidth < 901) { wrap.style.width = ""; return; }
+    const top = wrap.getBoundingClientRect().top - col.getBoundingClientRect().top + col.scrollTop;
+    const avail = col.clientHeight - top - 14;
+    wrap.style.width = `min(100%, ${Math.max(360, Math.floor(avail * 4 / 3))}px)`;
+  }
+  window.addEventListener("resize", fitDataCanvas);
 
   let resizeQueued = false;
   const ro = new ResizeObserver(() => {
@@ -1920,6 +2162,7 @@ function runSelfTest() {
     el.addEventListener("pointerup", () => el.blur());
   });
   setPlayBtn();
+  fitDataCanvas();
   data = generateDataset("moons", 120, 0.2, 42);
   S = initState(data);
   notice = "Press Step (→) or Play (Space) to start boosting. Run runSelfTest() in the console to check the math.";
