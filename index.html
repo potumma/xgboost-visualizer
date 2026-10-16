@@ -209,6 +209,11 @@
   .notice:empty { display: none; }
   .crit { margin: 10px 0; font-size: 12px; color: var(--muted); background: rgba(45, 212, 191, 0.04); border: 1px dashed rgba(45, 212, 191, 0.28);
           border-radius: 10px; padding: 8px 11px; }
+  /* the full sentence on one line on desktop / laptop: fitCrit() uses the narrower normal font for the formulas (.compact)
+     and lowers the font size only as much as needed */
+  .crit.compact { padding: 8px 7px; }
+  .crit.compact code { font-family: inherit; }
+  @media (min-width: 901px) { .crit { white-space: nowrap; overflow: hidden; } .crit.wrap { white-space: normal; } }
   .crit b { color: var(--text); font-weight: 600; }
   .crit code { font-family: var(--mono); color: var(--accent); }
 
@@ -352,7 +357,7 @@
   .loss-foot { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 6px 18px; align-items: center; font-size: 12px; color: var(--muted); }
 
   @media (prefers-reduced-motion: reduce) {
-    *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+    *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition: none !important; }
   }
 </style>
 </head>
@@ -1636,6 +1641,16 @@ function runSelfTest() {
   document.addEventListener("keyup", e => { if (e.code === "Space" && e.target.tagName === "BUTTON") e.preventDefault(); });
 
   /* ---------- Status ---------- */
+  // keep the full convergence sentence on one line: narrower font for the formulas, then a slightly smaller size if needed
+  function fitCrit() {
+    const c = $("crit"), over = () => c.scrollWidth > c.clientWidth + 1;
+    c.classList.remove("compact", "wrap"); c.style.fontSize = "";
+    if (innerWidth < 901 || !over()) return; // phones may wrap; wide screens already fit
+    c.classList.add("compact");
+    for (let fs = 12; over() && fs > 9; ) { fs -= 0.25; c.style.fontSize = fs + "px"; }
+    if (over()) { c.classList.add("wrap"); c.style.fontSize = ""; } // very narrow window: wrap rather than cut words off
+  }
+  window.addEventListener("resize", () => fitCrit());
   const STAGE_NAME = { grad: "compute gradients", split: "split a node", leaves: "leaf weights", update: "update scores", done: "finished" };
   function renderStatus() {
     const L = S.history.length ? S.history[S.history.length - 1].loss : NaN;
@@ -1653,7 +1668,8 @@ function runSelfTest() {
     $("backBtn").disabled = !undo.length; // nothing to go back to
     const h = S.history, dL = h.length >= 2 ? Math.abs(h[h.length - 2].loss - h[h.length - 1].loss) : null;
     $("crit").innerHTML = `<b>Convergence criterion:</b> stop when <code>|L<sub>t−1</sub> − L<sub>t</sub>| &lt; ε = ${expFmt(P.tol)}</code>
-      (loss stopped improving) or when <code>t = n_estimators = ${P.nEst}</code>. Last |ΔL| = <code>${dL == null ? "—" : dL.toExponential(2).replace("e-", "e−")}</code>`;
+      (loss stopped improving) or <code>t = n_estimators = ${P.nEst}</code>. last |ΔL| = <code>${dL == null ? "—" : dL.toExponential(2).replace("e-", "e−")}</code>`;
+    fitCrit();
   }
 
   /* ---------- Model state ---------- */
